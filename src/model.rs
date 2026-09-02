@@ -1,0 +1,658 @@
+use serde::{Deserialize, Serialize};
+
+fn default_lang() -> String {
+    "en".to_string()
+}
+fn default_font() -> String {
+    "Arial, Helvetica, sans-serif".to_string()
+}
+fn default_text_color() -> String {
+    "#1a1a1a".to_string()
+}
+fn default_bg() -> String {
+    "#f4f4f4".to_string()
+}
+fn default_width() -> u32 {
+    600
+}
+fn default_btn_bg() -> String {
+    "#FFAF46".to_string()
+}
+fn default_btn_fg() -> String {
+    "#0F1114".to_string()
+}
+fn default_breakpoint() -> String {
+    "480px".to_string()
+}
+fn default_logo_width() -> String {
+    "160px".to_string()
+}
+fn default_spacer_height() -> String {
+    "24px".to_string()
+}
+fn default_icon_size() -> String {
+    "32px".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Template {
+    pub version: u32,
+    pub name: String,
+    pub subject: String,
+    #[serde(default)]
+    pub preheader: String,
+    #[serde(default = "default_lang")]
+    pub lang: String,
+    #[serde(default)]
+    pub base_url: String,
+    pub brand: Brand,
+    pub head: Head,
+    pub body: Body,
+}
+
+impl Template {
+    #[allow(dead_code)]
+    pub fn minimal() -> Self {
+        Self {
+            version: 1,
+            name: "welcome".to_string(),
+            subject: "You're in.".to_string(),
+            preheader: "Here's what happens next.".to_string(),
+            lang: default_lang(),
+            base_url: String::new(),
+            brand: Brand::default(),
+            head: Head {
+                title: "You're in.".to_string(),
+                ..Head::default()
+            },
+            body: Body::default(),
+        }
+    }
+
+    pub fn normalize_base_url(&mut self) {
+        let trimmed = self.base_url.trim();
+        if trimmed.is_empty() {
+            self.base_url.clear();
+            return;
+        }
+        if trimmed.ends_with('/') {
+            self.base_url = trimmed.to_string();
+        } else {
+            self.base_url = format!("{trimmed}/");
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Brand {
+    #[serde(default = "default_font")]
+    pub font_family: String,
+    #[serde(default = "default_text_color")]
+    pub text_color: String,
+    #[serde(default = "default_bg")]
+    pub background_color: String,
+    #[serde(default = "default_width")]
+    pub content_width: u32,
+    #[serde(default = "default_btn_bg")]
+    pub button_background: String,
+    #[serde(default = "default_btn_fg")]
+    pub button_color: String,
+}
+
+impl Default for Brand {
+    fn default() -> Self {
+        Self {
+            font_family: default_font(),
+            text_color: default_text_color(),
+            background_color: default_bg(),
+            content_width: default_width(),
+            button_background: default_btn_bg(),
+            button_color: default_btn_fg(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Head {
+    pub title: String,
+    #[serde(default = "default_breakpoint")]
+    pub breakpoint: String,
+    #[serde(default)]
+    pub fonts: Vec<WebFont>,
+    #[serde(default)]
+    pub json_ld: String,
+    #[serde(default)]
+    pub css: String,
+    #[serde(default)]
+    pub css_inline: bool,
+}
+
+impl Default for Head {
+    fn default() -> Self {
+        Self {
+            title: String::new(),
+            breakpoint: default_breakpoint(),
+            fonts: Vec::new(),
+            json_ld: String::new(),
+            css: String::new(),
+            css_inline: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WebFont {
+    pub name: String,
+    pub href: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Body {
+    #[serde(default)]
+    pub background_color: String,
+    #[serde(default)]
+    pub nodes: Vec<BodyNode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub enum BodyNode {
+    MjSection(MjSection),
+    MjWrapper(MjWrapper),
+    MjHero(MjHero),
+    EmailHeader(EmailHeader),
+    EmailHero(EmailHero),
+    EmailCta(EmailCta),
+    EmailArticle(EmailArticle),
+    EmailFooter(EmailFooter),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub enum SectionChild {
+    MjColumn(MjColumn),
+    MjGroup(MjGroup),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub enum ColumnChild {
+    MjText(MjText),
+    MjButton(MjButton),
+    MjImage(MjImage),
+    MjDivider(MjDivider),
+    MjSpacer(MjSpacer),
+    MjSocial(MjSocial),
+    MjTable(MjTable),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Align {
+    Left,
+    #[default]
+    Center,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum HeroMode {
+    #[default]
+    FluidHeight,
+    FixedHeight,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum SocialMode {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ImagePosition {
+    #[default]
+    Top,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SocialNetwork {
+    Facebook,
+    Instagram,
+    Linkedin,
+    X,
+    Github,
+    Web,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjSection {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default)]
+    pub full_width: bool,
+    #[serde(default)]
+    pub children: Vec<SectionChild>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjColumn {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inner_background_color: Option<String>,
+    #[serde(default)]
+    pub components: Vec<ColumnChild>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjWrapper {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default)]
+    pub full_width: bool,
+    #[serde(default)]
+    pub children: Vec<BodyNode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjGroup {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default)]
+    pub children: Vec<MjColumn>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjText {
+    #[serde(default)]
+    pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjButton {
+    #[serde(default)]
+    pub content: String,
+    #[serde(default)]
+    pub href: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjImage {
+    #[serde(default)]
+    pub src: String,
+    #[serde(default)]
+    pub alt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub href: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default = "default_true")]
+    pub fluid_on_mobile: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjDivider {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjSpacer {
+    #[serde(default = "default_spacer_height")]
+    pub height: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjSocial {
+    #[serde(default)]
+    pub mode: SocialMode,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default = "default_icon_size")]
+    pub icon_size: String,
+    #[serde(default)]
+    pub elements: Vec<MjSocialElement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjSocialElement {
+    pub name: SocialNetwork,
+    pub href: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub src: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjTable {
+    #[serde(default)]
+    pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjHero {
+    #[serde(default)]
+    pub mode: HeroMode,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<String>,
+    #[serde(default)]
+    pub children: Vec<ColumnChild>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmailHeader {
+    #[serde(default)]
+    pub logo_src: String,
+    #[serde(default)]
+    pub logo_alt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo_href: Option<String>,
+    #[serde(default = "default_logo_width")]
+    pub logo_width: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmailHero {
+    #[serde(default)]
+    pub image_src: String,
+    #[serde(default)]
+    pub image_alt: String,
+    #[serde(default)]
+    pub heading: String,
+    #[serde(default)]
+    pub subheading: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmailCta {
+    #[serde(default)]
+    pub heading: String,
+    #[serde(default)]
+    pub copy: String,
+    #[serde(default)]
+    pub button_label: String,
+    #[serde(default)]
+    pub button_href: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmailArticle {
+    #[serde(default)]
+    pub image_src: String,
+    #[serde(default)]
+    pub image_alt: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub copy: String,
+    #[serde(default)]
+    pub link_label: String,
+    #[serde(default)]
+    pub link_href: String,
+    #[serde(default)]
+    pub image_position: ImagePosition,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmailFooter {
+    #[serde(default)]
+    pub company_name: String,
+    #[serde(default)]
+    pub address_lines: Vec<String>,
+    #[serde(default)]
+    pub unsubscribe_label: String,
+    #[serde(default)]
+    pub unsubscribe_href: String,
+    #[serde(default)]
+    pub social: Vec<MjSocialElement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copyright: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn kitchen_sink() -> Template {
+        let mut t = Template::minimal();
+        t.base_url = "https://cdn.example.com".to_string();
+        t.head.fonts.push(WebFont {
+            name: "Raleway".to_string(),
+            href: "https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap"
+                .to_string(),
+        });
+        t.body.nodes = vec![
+            BodyNode::EmailHeader(EmailHeader {
+                logo_src: "images/logo.png".to_string(),
+                logo_alt: "Logo".to_string(),
+                logo_href: Some("https://example.com".to_string()),
+                logo_width: "160px".to_string(),
+                background_color: None,
+            }),
+            BodyNode::EmailHero(EmailHero {
+                image_src: String::new(),
+                image_alt: String::new(),
+                heading: "Hi".to_string(),
+                subheading: "There".to_string(),
+                background_color: None,
+            }),
+            BodyNode::MjSection(MjSection {
+                background_color: None,
+                padding: None,
+                full_width: false,
+                children: vec![SectionChild::MjColumn(MjColumn {
+                    width: Some("100%".to_string()),
+                    background_color: None,
+                    padding: None,
+                    inner_background_color: None,
+                    components: vec![
+                        ColumnChild::MjText(MjText {
+                            content: "Hello".to_string(),
+                            align: Some(Align::Left),
+                            font_size: None,
+                            font_family: Some("Raleway, Arial, sans-serif".to_string()),
+                            color: None,
+                            padding: None,
+                        }),
+                        ColumnChild::MjButton(MjButton {
+                            content: "Read more".to_string(),
+                            href: "https://example.com".to_string(),
+                            background_color: None,
+                            color: None,
+                            align: None,
+                            font_family: None,
+                            border_radius: None,
+                            width: None,
+                            padding: None,
+                        }),
+                        ColumnChild::MjImage(MjImage {
+                            src: "https://cdn.example.com/a.png".to_string(),
+                            alt: "A".to_string(),
+                            href: None,
+                            width: None,
+                            align: Some(Align::Center),
+                            fluid_on_mobile: true,
+                            padding: None,
+                        }),
+                        ColumnChild::MjSocial(MjSocial {
+                            mode: SocialMode::Horizontal,
+                            align: None,
+                            icon_size: "32px".to_string(),
+                            elements: vec![MjSocialElement {
+                                name: SocialNetwork::X,
+                                href: "https://x.com/acme".to_string(),
+                                src: None,
+                            }],
+                        }),
+                        ColumnChild::MjTable(MjTable {
+                            content: "<table><tr><td>1</td></tr></table>".to_string(),
+                            font_size: None,
+                            color: None,
+                            padding: None,
+                        }),
+                    ],
+                })],
+            }),
+            BodyNode::MjHero(MjHero {
+                mode: HeroMode::FluidHeight,
+                background_url: None,
+                background_color: None,
+                background_height: None,
+                width: None,
+                height: None,
+                children: vec![],
+            }),
+            BodyNode::EmailCta(EmailCta {
+                heading: "Go".to_string(),
+                copy: "Now".to_string(),
+                button_label: "Shop".to_string(),
+                button_href: "https://example.com".to_string(),
+                background_color: None,
+            }),
+            BodyNode::EmailArticle(EmailArticle {
+                image_src: String::new(),
+                image_alt: String::new(),
+                title: "Story".to_string(),
+                copy: "Body".to_string(),
+                link_label: "More".to_string(),
+                link_href: "https://example.com".to_string(),
+                image_position: ImagePosition::Left,
+            }),
+            BodyNode::EmailFooter(EmailFooter {
+                company_name: "Acme".to_string(),
+                address_lines: vec!["1 Main St".to_string()],
+                unsubscribe_label: "Unsubscribe".to_string(),
+                unsubscribe_href: "*|UNSUB|*".to_string(),
+                social: vec![],
+                copyright: Some("© Acme".to_string()),
+            }),
+        ];
+        t
+    }
+
+    #[test]
+    fn inner_enums_round_trip_kebab_case() {
+        let json = serde_json::to_string(&HeroMode::FluidHeight).unwrap();
+        assert_eq!(json, "\"fluid-height\"");
+        let json = serde_json::to_string(&SocialMode::Horizontal).unwrap();
+        assert_eq!(json, "\"horizontal\"");
+        let json = serde_json::to_string(&ImagePosition::Top).unwrap();
+        assert_eq!(json, "\"top\"");
+        let json = serde_json::to_string(&SocialNetwork::X).unwrap();
+        assert_eq!(json, "\"x\"");
+        let json = serde_json::to_string(&Align::Center).unwrap();
+        assert_eq!(json, "\"center\"");
+    }
+
+    #[test]
+    fn body_node_type_tag_is_kebab_case() {
+        let node = BodyNode::EmailHero(EmailHero {
+            image_src: String::new(),
+            image_alt: String::new(),
+            heading: "H".to_string(),
+            subheading: String::new(),
+            background_color: None,
+        });
+        let v = serde_json::to_value(&node).unwrap();
+        assert_eq!(v["type"], "email-hero");
+    }
+
+    #[test]
+    fn extra_keys_are_ignored() {
+        let raw = r#"{
+            "version": 1,
+            "name": "n",
+            "subject": "s",
+            "brand": {},
+            "head": { "title": "t", "future": true },
+            "body": { "nodes": [], "extra": 1 }
+        }"#;
+        let t: Template = serde_json::from_str(raw).unwrap();
+        assert_eq!(t.head.title, "t");
+        assert_eq!(t.lang, "en");
+        assert_eq!(t.brand.content_width, 600);
+    }
+
+    #[test]
+    fn kitchen_sink_round_trip() {
+        let t = kitchen_sink();
+        let json = serde_json::to_string_pretty(&t).unwrap();
+        let back: Template = serde_json::from_str(&json).unwrap();
+        assert_eq!(t, back);
+        assert!(json.contains("\"type\": \"mj-section\""));
+        assert!(json.contains("\"mode\": \"fluid-height\""));
+        assert!(json.contains("\"name\": \"x\""));
+        assert!(json.contains("\"image_position\": \"left\""));
+    }
+}
