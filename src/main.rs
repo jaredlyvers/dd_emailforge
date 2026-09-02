@@ -1,3 +1,4 @@
+mod emit;
 mod model;
 mod paths;
 mod storage;
