@@ -18,6 +18,7 @@ pub struct DetailHit {
     pub id: TreeId,
 }
 
+#[cfg(test)]
 pub fn details_lines(
     template: Option<&Template>,
     row: Option<&TreeRow>,

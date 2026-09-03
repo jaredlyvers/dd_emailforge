@@ -189,6 +189,7 @@ impl EditFormState {
         self.set(field.id, options[next].to_string());
     }
 
+    #[cfg(test)]
     pub fn field_index(&self, id: &str) -> Option<usize> {
         self.form.fields.iter().position(|f| f.id == id)
     }
