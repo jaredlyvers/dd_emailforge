@@ -157,6 +157,28 @@ fn warning_toast_from_theme_status_does_not_panic_draw() {
 }
 
 #[test]
+fn p_without_template_toasts_warning() {
+    let mut app = chrome_app();
+    send_key(&mut app, KeyCode::Char('p'), KeyModifiers::NONE);
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("No template open"))
+    );
+}
+
+#[test]
+fn shift_e_without_template_toasts_warning() {
+    let mut app = chrome_app();
+    send_key(&mut app, KeyCode::Char('E'), KeyModifiers::SHIFT);
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("No template open"))
+    );
+}
+
+#[test]
 fn f3_without_template_toasts_warning() {
     let mut app = chrome_app();
     send_key(&mut app, KeyCode::F(3), KeyModifiers::NONE);

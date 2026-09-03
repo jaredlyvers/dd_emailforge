@@ -111,6 +111,8 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("F1", "Open/close this help"),
             ("F2", "Open/close theme source + sampled tokens"),
             ("F3", "Validate the open template"),
+            ("p", "Preview in browser (mjml -w + loopback wrapper)"),
+            ("Shift+E", "Export template.mjml + template.html next to the JSON"),
             ("s", "Save template.json (+ .backup on manual save)"),
             ("Ctrl+Q", "Quit (confirms if unsaved; bare q does not quit)"),
         ],

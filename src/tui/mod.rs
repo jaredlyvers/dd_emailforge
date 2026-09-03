@@ -22,10 +22,12 @@ pub(in crate::tui) use draw::centered_rect;
 
 mod draw;
 mod events;
+mod export;
 mod help;
 mod modals;
 mod theme;
 mod toasts;
+mod util;
 #[cfg(test)]
 mod tests;
 
@@ -127,6 +129,7 @@ pub(super) struct App {
     dirty: bool,
     dirty_since: Option<std::time::Instant>,
     last_saved_json: String,
+    preview: Option<crate::preview::PreviewSession>,
 }
 
 impl App {
@@ -162,6 +165,7 @@ impl App {
             dirty: false,
             dirty_since: None,
             last_saved_json,
+            preview: None,
         }
     }
 
@@ -171,6 +175,7 @@ impl App {
     ) -> anyhow::Result<()> {
         while !self.should_quit {
             self.tick_autosave(std::time::Instant::now());
+            self.drain_watch_errors();
             terminal.draw(|f| self.draw(f))?;
 
             if event::poll(Duration::from_millis(100))? {
@@ -192,12 +197,13 @@ impl App {
                 &["F1:Help", "Esc:Close", "Ctrl+Q:Quit"]
             }
         } else if width < 80 {
-            &["F1:Help", "F2:Theme", "F3:Val", "s:Save", "C-q:Quit"]
+            &["F1:Help", "F2:Theme", "F3:Val", "p:Prev", "s:Save", "C-q:Quit"]
         } else if width < 120 {
             &[
                 "F1: Help",
                 "F2: Theme",
                 "F3: Validate",
+                "p: Preview",
                 "s: Save",
                 "Ctrl+Q: Quit",
             ]
@@ -206,6 +212,8 @@ impl App {
                 "F1: Help",
                 "F2: Theme",
                 "F3: Validate",
+                "p: Preview",
+                "Shift+E: Export",
                 "s: Save",
                 "Ctrl+Q: Quit",
                 "(mouse: click/scroll)",
@@ -244,6 +252,7 @@ impl App {
         self.dirty = false;
         self.dirty_since = None;
         self.path = Some(path.to_path_buf());
+        self.write_mjml_sidecar();
         Ok(())
     }
 
@@ -269,6 +278,7 @@ impl App {
                 self.last_saved_json = serde_json::to_string(template).unwrap_or_default();
                 self.dirty = false;
                 self.dirty_since = None;
+                self.write_mjml_sidecar();
             }
             Err(e) => {
                 self.push_toast(ToastLevel::Error, format!("Autosave failed: {e}"));

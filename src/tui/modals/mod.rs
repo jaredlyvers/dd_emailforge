@@ -15,6 +15,8 @@ pub(in crate::tui) enum Modal {
         errors: Vec<String>,
         scroll_offset: usize,
     },
+    MjmlMissing { searched: Vec<String> },
+    MjmlCompileError { stderr: String, scroll: u16 },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

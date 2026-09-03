@@ -7,13 +7,11 @@ use crate::model::{
 };
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // used by PR 4 export/preview
 pub enum EmitMode {
     Preview { origin: String },
     Export,
 }
 
-#[allow(dead_code)] // used by PR 4 export/preview
 pub fn emit_mjml(t: &Template, mode: EmitMode) -> anyhow::Result<String> {
     let mut w = Writer::new();
     w.open_attrs("mjml", &[("lang", xml_escape_attr(&t.lang))]);
@@ -78,6 +76,11 @@ pub fn emit_mjml(t: &Template, mode: EmitMode) -> anyhow::Result<String> {
     w.close("mj-body");
     w.close("mjml");
     Ok(w.finish())
+}
+
+pub fn write_mjml(t: &Template, path: &std::path::Path, mode: EmitMode) -> anyhow::Result<()> {
+    let mjml = emit_mjml(t, mode)?;
+    crate::storage::atomic_write(path, mjml.as_bytes())
 }
 
 fn emit_attributes(w: &mut Writer, t: &Template) {
@@ -663,7 +666,6 @@ fn push_align(attrs: &mut Vec<(&'static str, String)>, align: Option<Align>) {
     }
 }
 
-#[allow(dead_code)] // unit-tested; used by image emit + PR 4
 pub(crate) fn rewrite_src(src: &str, t: &Template, mode: &EmitMode) -> anyhow::Result<String> {
     let s = src.trim();
     if s.is_empty() {

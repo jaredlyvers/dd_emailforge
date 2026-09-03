@@ -31,6 +31,18 @@ impl App {
             } => {
                 self.render_validation_errors_modal(frame, errors, *scroll_offset);
             }
+            Modal::MjmlMissing { searched } => {
+                let msg = crate::mjml::not_found_message(searched);
+                self.render_message_modal(
+                    frame,
+                    " MJML not found ",
+                    &msg,
+                    "Enter / Esc: dismiss",
+                );
+            }
+            Modal::MjmlCompileError { stderr, scroll } => {
+                self.render_compile_error_modal(frame, stderr, *scroll);
+            }
         }
     }
 
@@ -132,6 +144,39 @@ impl App {
                 width: content_w,
                 height: 1,
             },
+        );
+    }
+
+    fn render_compile_error_modal(
+        &self,
+        frame: &mut ratatui::Frame,
+        stderr: &str,
+        scroll: u16,
+    ) {
+        let area = centered_rect(80, 60, frame.area());
+        frame.render_widget(Clear, area);
+        let block = Block::default()
+            .title(" MJML compile error ")
+            .borders(Borders::ALL)
+            .style(Style::default().bg(self.theme.modal_background))
+            .border_style(Style::default().fg(self.theme.border_active))
+            .title_style(
+                Style::default()
+                    .fg(self.theme.modal_header)
+                    .add_modifier(Modifier::BOLD),
+            );
+        frame.render_widget(block.clone(), area);
+        let inner = block.inner(area);
+        frame.render_widget(
+            Paragraph::new(stderr.to_string())
+                .style(
+                    Style::default()
+                        .fg(self.theme.modal_text)
+                        .bg(self.theme.modal_background),
+                )
+                .wrap(Wrap { trim: false })
+                .scroll((scroll, 0)),
+            inner,
         );
     }
 }

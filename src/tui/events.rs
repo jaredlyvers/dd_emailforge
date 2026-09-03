@@ -116,6 +116,12 @@ impl App {
                 KeyCode::F(1) => self.show_help = true,
                 KeyCode::F(2) => self.show_theme = true,
                 KeyCode::F(3) => self.open_validation_modal(),
+                KeyCode::Char('p') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.begin_preview();
+                }
+                KeyCode::Char('E') if k.modifiers.contains(KeyModifiers::SHIFT) => {
+                    self.begin_export();
+                }
                 KeyCode::Char('s') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.begin_save();
                 }

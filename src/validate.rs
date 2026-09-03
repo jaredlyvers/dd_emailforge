@@ -46,7 +46,6 @@ pub fn validate_template_with_root(t: &Template, root: Option<&Path>) -> Validat
     )
 }
 
-#[allow(dead_code)]
 pub fn validate_template_for_export(t: &Template, root: Option<&Path>) -> ValidateReport {
     validate_inner(
         t,

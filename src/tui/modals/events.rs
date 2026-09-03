@@ -20,6 +20,8 @@ impl App {
                 Modal::SavePrompt { .. } => self.handle_save_prompt_event(key),
                 Modal::ConfirmPrompt { .. } => self.handle_confirm_prompt_event(key),
                 Modal::ValidationErrors { .. } => self.handle_validation_errors_event(key),
+                Modal::MjmlMissing { .. } => self.handle_load_error_event(key),
+                Modal::MjmlCompileError { .. } => self.handle_compile_error_event(key),
             };
         }
         Some(ModalResult::Continue)
@@ -148,6 +150,28 @@ impl App {
             KeyCode::PageDown => {
                 if let Some(Modal::ValidationErrors { scroll_offset, .. }) = self.modal.as_mut() {
                     *scroll_offset = (scroll + 5).min(errors_len.saturating_sub(1));
+                }
+                Some(ModalResult::Continue)
+            }
+            _ => Some(ModalResult::Continue),
+        }
+    }
+
+    fn handle_compile_error_event(&mut self, key: event::KeyEvent) -> Option<ModalResult> {
+        match key.code {
+            KeyCode::Enter | KeyCode::Esc => {
+                self.modal = None;
+                Some(ModalResult::CloseSuccess)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if let Some(Modal::MjmlCompileError { scroll, .. }) = self.modal.as_mut() {
+                    *scroll = scroll.saturating_add(1);
+                }
+                Some(ModalResult::Continue)
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                if let Some(Modal::MjmlCompileError { scroll, .. }) = self.modal.as_mut() {
+                    *scroll = scroll.saturating_sub(1);
                 }
                 Some(ModalResult::Continue)
             }

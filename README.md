@@ -24,9 +24,13 @@ dd_emailforge tui path/to/template.json
 dd_emailforge tui path/to/folder/
 dd_emailforge validate path/to/folder/
 dd_emailforge show path/to/template.json
+dd_emailforge export path/to/folder/
+dd_emailforge preview path/to/folder/ --port 8766
 ```
 
-**TUI:** `F1` help · `F2` theme · `F3` validate · `s` save · `Ctrl+Q` quit (confirms if unsaved).
+**TUI:** `F1` help · `F2` theme · `F3` validate · `p` preview · `Shift+E` export · `s` save · `Ctrl+Q` quit (confirms if unsaved).
+
+Export writes `template.mjml` + `template.html` next to the JSON (or `--out`). Preview serves a loopback wrapper at 600px + 320px and watches the MJML file. Official `mjml` 5 must be on `PATH` or in `node_modules/.bin/mjml`.
 
 ## Theme
 
