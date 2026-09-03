@@ -24,12 +24,14 @@ use crate::storage;
 
 pub(in crate::tui) use draw::centered_rect;
 
+mod component_kind;
 mod cursor;
 mod details;
 mod draw;
 mod editform;
 mod edits;
 mod events;
+mod insert;
 mod export;
 mod form_textarea;
 mod help;
@@ -46,7 +48,7 @@ mod tests;
 use theme::*;
 use toasts::*;
 
-pub(in crate::tui) use modals::{ConfirmKind, Modal, ModalResult};
+pub(in crate::tui) use modals::{ConfirmKind, ImagePickerState, Modal, ModalResult};
 
 pub(super) const AUTOSAVE_DEBOUNCE: Duration = Duration::from_secs(2);
 
@@ -155,6 +157,8 @@ pub(super) struct App {
     last_click: Option<(u16, u16, Instant)>,
     undo_stack: Vec<Template>,
     form_field_areas: RefCell<Vec<(Rect, usize)>>,
+    details_hit_areas: Vec<(Rect, tree::TreeId)>,
+    paused_form_edit_modal: Option<Modal>,
 }
 
 impl App {
@@ -203,6 +207,8 @@ impl App {
             last_click: None,
             undo_stack: Vec::new(),
             form_field_areas: RefCell::new(Vec::new()),
+            details_hit_areas: Vec::new(),
+            paused_form_edit_modal: None,
         }
     }
 
@@ -244,6 +250,7 @@ impl App {
                 "F3: Validate",
                 "p: Preview",
                 "s: Save",
+                "/: Insert",
                 "Ctrl+Q: Quit",
             ]
         } else {
@@ -254,6 +261,7 @@ impl App {
                 "p: Preview",
                 "Shift+E: Export",
                 "s: Save",
+                "/: Insert",
                 "Ctrl+Q: Quit",
                 "(mouse: click/scroll)",
             ]

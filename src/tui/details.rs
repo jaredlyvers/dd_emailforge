@@ -10,25 +10,46 @@ pub fn details_title(label: &str) -> String {
     format!("Details — {label}")
 }
 
+#[derive(Clone, Debug)]
+pub struct DetailHit {
+    pub line: usize,
+    pub x0: usize,
+    pub x1: usize,
+    pub id: TreeId,
+}
+
 pub fn details_lines(
     template: Option<&Template>,
     row: Option<&TreeRow>,
     width: usize,
 ) -> Vec<String> {
+    details_view(template, row, width).0
+}
+
+pub fn details_view(
+    template: Option<&Template>,
+    row: Option<&TreeRow>,
+    width: usize,
+) -> (Vec<String>, Vec<DetailHit>) {
     let Some(t) = template else {
-        return vec!["No template open.".into()];
+        return (vec!["No template open.".into()], Vec::new());
     };
     let Some(row) = row else {
-        return vec!["Nothing selected.".into()];
+        return (vec!["Nothing selected.".into()], Vec::new());
     };
     match &row.id {
-        TreeId::Head => head_lines(t),
-        TreeId::Brand => brand_lines(t),
+        TreeId::Head => (head_lines(t), Vec::new()),
+        TreeId::Brand => (brand_lines(t), Vec::new()),
         TreeId::Body => {
             let mut lines = vec![format!("nodes: {}", t.body.nodes.len())];
             lines.push(String::new());
-            lines.extend(email_ascii(t, width));
-            lines
+            let (ascii, mut hits) = email_ascii(t, width);
+            let offset = lines.len();
+            for h in &mut hits {
+                h.line += offset;
+            }
+            lines.extend(ascii);
+            (lines, hits)
         }
         TreeId::Path(path) => path_lines(t, path, width),
     }
@@ -76,16 +97,16 @@ fn brand_lines(t: &Template) -> Vec<String> {
     ]
 }
 
-fn path_lines(t: &Template, path: &[Step], width: usize) -> Vec<String> {
+fn path_lines(t: &Template, path: &[Step], width: usize) -> (Vec<String>, Vec<DetailHit>) {
     match locate(t, path) {
-        Located::BodyNode(n) => body_node_lines(n, width, t.brand.content_width),
-        Located::Column(c) => column_lines(c),
+        Located::BodyNode(n) => body_node_lines(n, path, width, t.brand.content_width),
+        Located::Column(c) => column_lines(c, path),
         Located::Leaf(label, extra) => {
             let mut v = vec![label];
             v.extend(extra);
-            v
+            (v, Vec::new())
         }
-        Located::Missing => vec!["(missing node)".into()],
+        Located::Missing => (vec!["(missing node)".into()], Vec::new()),
     }
 }
 
@@ -170,7 +191,12 @@ fn locate_column<'a>(c: &'a MjColumn, mut steps: std::slice::Iter<'_, Step>) -> 
     }
 }
 
-fn body_node_lines(n: &BodyNode, width: usize, canvas: u32) -> Vec<String> {
+fn body_node_lines(
+    n: &BodyNode,
+    path: &[Step],
+    width: usize,
+    canvas: u32,
+) -> (Vec<String>, Vec<DetailHit>) {
     match n {
         BodyNode::MjSection(s) => {
             let mut lines = vec![format!("children: {}", s.children.len())];
@@ -178,33 +204,44 @@ fn body_node_lines(n: &BodyNode, width: usize, canvas: u32) -> Vec<String> {
                 lines.push(format!("background: {bg}"));
             }
             lines.push(String::new());
-            lines.extend(section_ascii(s, width, canvas));
-            lines
+            let offset = lines.len();
+            let (ascii, mut hits) = section_ascii(s, path, width, canvas);
+            for h in &mut hits {
+                h.line += offset;
+            }
+            lines.extend(ascii);
+            (lines, hits)
         }
-        BodyNode::MjWrapper(w) => vec![
-            format!("wrapper children: {}", w.children.len()),
-            format!("full_width: {}", w.full_width),
-        ],
+        BodyNode::MjWrapper(w) => (
+            vec![
+                format!("wrapper children: {}", w.children.len()),
+                format!("full_width: {}", w.full_width),
+            ],
+            Vec::new(),
+        ),
         BodyNode::MjHero(h) => {
             let mut lines = vec![format!("hero children: {}", h.children.len())];
             if let Some(url) = &h.background_url {
                 lines.push(format!("background_url: {url}"));
             }
-            lines
+            (lines, Vec::new())
         }
-        BodyNode::EmailHeader(h) => email_header_lines(h),
-        BodyNode::EmailHero(h) => email_hero_lines(h),
-        BodyNode::EmailCta(c) => vec![
-            format!("heading: {}", dash(&c.heading)),
-            format!("copy:    {}", dash(&c.copy)),
-            format!(
-                "button:  {} → {}",
-                dash(&c.button_label),
-                dash(&c.button_href)
-            ),
-        ],
-        BodyNode::EmailArticle(a) => email_article_lines(a),
-        BodyNode::EmailFooter(f) => email_footer_lines(f),
+        BodyNode::EmailHeader(h) => (email_header_lines(h), Vec::new()),
+        BodyNode::EmailHero(h) => (email_hero_lines(h), Vec::new()),
+        BodyNode::EmailCta(c) => (
+            vec![
+                format!("heading: {}", dash(&c.heading)),
+                format!("copy:    {}", dash(&c.copy)),
+                format!(
+                    "button:  {} → {}",
+                    dash(&c.button_label),
+                    dash(&c.button_href)
+                ),
+            ],
+            Vec::new(),
+        ),
+        BodyNode::EmailArticle(a) => (email_article_lines(a), Vec::new()),
+        BodyNode::EmailFooter(f) => (email_footer_lines(f), Vec::new()),
     }
 }
 
@@ -241,15 +278,25 @@ fn email_footer_lines(f: &EmailFooter) -> Vec<String> {
     ]
 }
 
-fn column_lines(c: &MjColumn) -> Vec<String> {
+fn column_lines(c: &MjColumn, path: &[Step]) -> (Vec<String>, Vec<DetailHit>) {
     let mut lines = vec![
         format!("width: {}", c.width.as_deref().unwrap_or("(equal split)")),
         format!("components: {}", c.components.len()),
     ];
-    for ch in &c.components {
-        lines.push(format!("  - {}", column_child_detail(ch)));
+    let mut hits = Vec::new();
+    for (i, ch) in c.components.iter().enumerate() {
+        let line = format!("  - {}", column_child_detail(ch));
+        let mut id_path = path.to_vec();
+        id_path.push(Step::ColComp(i));
+        hits.push(DetailHit {
+            line: lines.len(),
+            x0: 0,
+            x1: line.len(),
+            id: TreeId::Path(id_path),
+        });
+        lines.push(line);
     }
-    lines
+    (lines, hits)
 }
 
 fn column_child_detail(c: &ColumnChild) -> String {
@@ -264,7 +311,7 @@ fn column_child_detail(c: &ColumnChild) -> String {
     }
 }
 
-fn email_ascii(t: &Template, width: usize) -> Vec<String> {
+fn email_ascii(t: &Template, width: usize) -> (Vec<String>, Vec<DetailHit>) {
     let inner = width.saturating_sub(2).max(8);
     let border = format!("+{}+", "-".repeat(inner));
     let mut lines = vec![border.clone()];
@@ -272,21 +319,34 @@ fn email_ascii(t: &Template, width: usize) -> Vec<String> {
         &format!("{}px canvas", t.brand.content_width),
         inner,
     ));
+    let mut hits = Vec::new();
     if t.body.nodes.is_empty() {
         lines.push(fit_box("(empty body)", inner));
     } else {
         for (i, n) in t.body.nodes.iter().enumerate() {
-            lines.push(fit_box(&format!("{}. {}", i + 1, body_kind(n)), inner));
+            let line = fit_box(&format!("{}. {}", i + 1, body_kind(n)), inner);
+            hits.push(DetailHit {
+                line: lines.len(),
+                x0: 1,
+                x1: line.len().saturating_sub(1),
+                id: TreeId::Path(vec![Step::BodyNode(i)]),
+            });
+            lines.push(line);
         }
     }
     lines.push(border);
-    lines
+    (lines, hits)
 }
 
-fn section_ascii(s: &MjSection, width: usize, _canvas: u32) -> Vec<String> {
+fn section_ascii(
+    s: &MjSection,
+    path: &[Step],
+    width: usize,
+    _canvas: u32,
+) -> (Vec<String>, Vec<DetailHit>) {
     let inner = width.saturating_sub(2).max(8);
     if s.children.is_empty() {
-        return vec!["(no columns)".into()];
+        return (vec!["(no columns)".into()], Vec::new());
     }
     let cols = s.children.len().max(1);
     let cell = ((inner.saturating_sub(cols.saturating_sub(1))) / cols).max(4);
@@ -296,7 +356,9 @@ fn section_ascii(s: &MjSection, width: usize, _canvas: u32) -> Vec<String> {
         top.push('+');
     }
     let mut mid = String::from("|");
-    for child in &s.children {
+    let mut hits = Vec::new();
+    let mut x = 1usize;
+    for (i, child) in s.children.iter().enumerate() {
         let label = match child {
             SectionChild::MjColumn(c) => c
                 .width
@@ -304,10 +366,19 @@ fn section_ascii(s: &MjSection, width: usize, _canvas: u32) -> Vec<String> {
                 .unwrap_or_else(|| format!("col {}", c.components.len())),
             SectionChild::MjGroup(_) => "group".into(),
         };
+        let mut id_path = path.to_vec();
+        id_path.push(Step::SectionChild(i));
+        hits.push(DetailHit {
+            line: 1,
+            x0: x,
+            x1: x + cell,
+            id: TreeId::Path(id_path),
+        });
         mid.push_str(&pad_cell(&label, cell));
         mid.push('|');
+        x += cell + 1;
     }
-    vec![top.clone(), mid, top]
+    (vec![top.clone(), mid, top], hits)
 }
 
 fn fit_box(text: &str, inner: usize) -> String {

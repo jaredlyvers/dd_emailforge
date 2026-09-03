@@ -37,7 +37,7 @@ impl App {
         }
     }
 
-    fn selected_tree_id(&self) -> Option<TreeId> {
+    pub(in crate::tui) fn selected_tree_id(&self) -> Option<TreeId> {
         self.tree_rows()
             .get(self.selected_row)
             .map(|r| r.id.clone())

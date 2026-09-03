@@ -152,6 +152,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("h / l", "Collapse / expand"),
             ("Space", "Toggle expand"),
             ("Enter", "Edit selected (FormEdit)"),
+            ("/", "Insert component (legal kinds only)"),
             ("Tab", "Focus Structure ↔ Details"),
             ("d", "Delete (not HEAD/BRAND/BODY)"),
             ("y", "Duplicate after"),
@@ -176,6 +177,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("Left / Right", "Cycle enum, or move cursor"),
             ("A / X", "Add / remove collection row (fonts, social)"),
             ("Ctrl+S", "Save (or return from a drilled-in item)"),
+            ("Ctrl+P", "Image picker on src / background_url fields"),
             ("Esc", "Cancel"),
             ("Click field", "Focus that input"),
         ],
@@ -193,6 +195,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("Wheel", "Scroll the pane under the cursor"),
             ("Click tree row", "Select (glyph column expands)"),
             ("Click pane", "Focus Structure or Details"),
+            ("Click ascii map", "Select column or component"),
             ("Double-click", "Same as Enter (open FormEdit)"),
         ],
         "•",
@@ -204,7 +207,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
 
     lines.push(Line::from(Span::styled("Notes", h_style)));
     lines.push(Line::from(""));
-    let note = "Autosave rewrites template.json 2s after a change when a path is set. Manual s also writes template.json.backup. JSON-LD and CSS may be invalid while typing; F3 / export / preview require them to parse. Insert picker and image picker land in the next slice.";
+    let note = "Autosave rewrites template.json 2s after a change when a path is set. Manual s also writes template.json.backup. JSON-LD and CSS may be invalid while typing; F3 / export / preview require them to parse. Insert picker lists only kinds legal for the current selection. Image picker is rooted at images/ and cannot walk above the template folder.";
     for chunk in wrap_to_lines(note, width.saturating_sub(2)) {
         lines.push(Line::from(Span::raw(format!("  {}", chunk))));
     }

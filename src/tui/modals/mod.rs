@@ -3,6 +3,7 @@
 mod events;
 mod form_edit;
 mod paint;
+mod pickers;
 
 pub(in crate::tui) use form_edit::DrillFrame;
 
@@ -36,6 +37,27 @@ pub(in crate::tui) enum Modal {
         scroll_offset: u16,
         drill_stack: Vec<DrillFrame>,
     },
+    ComponentPicker {
+        query: String,
+        selected: usize,
+    },
+    ImagePicker {
+        state: ImagePickerState,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub(in crate::tui) struct ImagePickerState {
+    pub(in crate::tui) root: std::path::PathBuf,
+    pub(in crate::tui) cwd: std::path::PathBuf,
+    pub(in crate::tui) filter: String,
+    pub(in crate::tui) selected: usize,
+    pub(in crate::tui) binding: ImagePickBinding,
+}
+
+#[derive(Debug, Clone)]
+pub(in crate::tui) enum ImagePickBinding {
+    FormEditField { field_id: String },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -30,6 +30,8 @@ impl App {
                 Modal::MjmlMissing { .. } => self.handle_load_error_event(key),
                 Modal::MjmlCompileError { .. } => self.handle_compile_error_event(key),
                 Modal::FormEdit { .. } => self.handle_form_edit_event(key),
+                Modal::ComponentPicker { .. } => self.handle_component_picker_event(key),
+                Modal::ImagePicker { .. } => self.handle_image_picker_event(key),
             };
         }
         Some(ModalResult::Continue)

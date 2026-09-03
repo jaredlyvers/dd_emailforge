@@ -133,6 +133,9 @@ impl App {
                     }
                 }
                 KeyCode::Enter => self.tree_enter(),
+                KeyCode::Char('/') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.open_insert_picker();
+                }
                 KeyCode::Char('d') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.delete_selected_row();
                 }
@@ -258,6 +261,21 @@ impl App {
             }
             MouseEventKind::Down(MouseButton::Left) if in_details => {
                 self.pane = PaneFocus::Details;
+                if let Some((_, id)) = self
+                    .details_hit_areas
+                    .iter()
+                    .find(|(r, _)| contains(*r, x, y))
+                    .cloned()
+                {
+                    self.collapsed.remove(&super::tree::TreeId::Body);
+                    if let super::tree::TreeId::Path(path) = &id {
+                        for i in 1..path.len() {
+                            self.collapsed
+                                .remove(&super::tree::TreeId::Path(path[..i].to_vec()));
+                        }
+                    }
+                    self.select_tree_id(&id);
+                }
             }
             _ => {}
         }

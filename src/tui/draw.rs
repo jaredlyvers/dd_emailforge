@@ -68,7 +68,7 @@ impl App {
     }
 
     fn render_body(&mut self, frame: &mut ratatui::Frame, area: Rect) {
-        use super::details::{details_lines, details_title};
+        use super::details::{details_title, details_view};
         use super::tree::{master_detail_tree_width, selected_label, PaneFocus};
 
         self.clamp_tree_selection();
@@ -180,11 +180,35 @@ impl App {
         let details_inner = details_block.inner(details_area);
         frame.render_widget(details_block, details_area);
 
-        let text_lines = details_lines(
+        let (text_lines, hits) = details_view(
             self.template.as_ref(),
             rows.get(self.selected_row),
             details_inner.width as usize,
         );
+        self.details_hit_areas.clear();
+        for hit in &hits {
+            if hit.line < self.details_scroll {
+                continue;
+            }
+            let screen_y = hit.line - self.details_scroll;
+            if screen_y >= details_inner.height as usize {
+                continue;
+            }
+            let x0 = hit.x0.min(details_inner.width as usize) as u16;
+            let x1 = hit.x1.min(details_inner.width as usize) as u16;
+            if x1 <= x0 {
+                continue;
+            }
+            self.details_hit_areas.push((
+                Rect {
+                    x: details_inner.x + x0,
+                    y: details_inner.y + screen_y as u16,
+                    width: x1.saturating_sub(x0).max(1),
+                    height: 1,
+                },
+                hit.id.clone(),
+            ));
+        }
         self.details_scroll_max = text_lines
             .len()
             .saturating_sub(details_inner.height as usize);

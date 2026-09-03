@@ -46,6 +46,12 @@ impl App {
             } => {
                 self.render_form_edit_modal(frame, state, *cursor_pos, *scroll_offset);
             }
+            Modal::ComponentPicker { query, selected } => {
+                self.render_component_picker(frame, query, *selected);
+            }
+            Modal::ImagePicker { state } => {
+                self.render_image_picker(frame, state);
+            }
         }
     }
 
@@ -533,5 +539,209 @@ impl App {
                 frame.render_widget(Paragraph::new(lines.join("\n")).style(value_style), rect);
             }
         }
+    }
+
+    fn render_component_picker(&self, frame: &mut ratatui::Frame, query: &str, selected: usize) {
+        let area = centered_rect(70, 70, frame.area());
+        frame.render_widget(Clear, area);
+        let block = Block::default()
+            .title(" Insert component ")
+            .borders(Borders::ALL)
+            .style(Style::default().bg(self.theme.modal_background))
+            .border_style(Style::default().fg(self.theme.border_active))
+            .title_style(
+                Style::default()
+                    .fg(self.theme.modal_header)
+                    .add_modifier(Modifier::BOLD),
+            );
+        let inner = block.inner(area);
+        frame.render_widget(block, area);
+        if inner.height < 4 {
+            return;
+        }
+        frame.render_widget(
+            Paragraph::new(format!("Search: {query}_")).style(
+                Style::default()
+                    .fg(self.theme.text_active_focus)
+                    .bg(self.theme.modal_background),
+            ),
+            Rect::new(inner.x, inner.y, inner.width, 1),
+        );
+        let class = crate::tui::component_kind::classify(
+            self.template.as_ref(),
+            &self
+                .selected_tree_id()
+                .unwrap_or(crate::tui::tree::TreeId::Body),
+        );
+        let rows = crate::tui::component_kind::picker_rows(class, query);
+        let body_y = inner.y + 2;
+        let body_h = inner.height.saturating_sub(3);
+        if rows.is_empty() {
+            frame.render_widget(
+                Paragraph::new("(nothing can be inserted here)").style(
+                    Style::default()
+                        .fg(self.theme.text_secondary)
+                        .bg(self.theme.modal_background),
+                ),
+                Rect::new(inner.x, body_y, inner.width, 1),
+            );
+        } else {
+            let visible = body_h as usize;
+            let start = if selected >= visible {
+                selected + 1 - visible
+            } else {
+                0
+            };
+            for (i, row) in rows.iter().skip(start).take(visible).enumerate() {
+                let y = body_y + i as u16;
+                let is_sel = start + i == selected;
+                let (text, style) = match row {
+                    crate::tui::component_kind::PickerRow::Header(h) => (
+                        (*h).to_string(),
+                        Style::default()
+                            .fg(self.theme.modal_labels)
+                            .bg(self.theme.modal_background)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    crate::tui::component_kind::PickerRow::Kind(k) => {
+                        let label = format!("  {}", k.label());
+                        if is_sel {
+                            (
+                                label,
+                                Style::default()
+                                    .fg(self.theme.text_active_focus)
+                                    .bg(self.theme.selected_background),
+                            )
+                        } else {
+                            (
+                                label,
+                                Style::default()
+                                    .fg(self.theme.modal_text)
+                                    .bg(self.theme.modal_background),
+                            )
+                        }
+                    }
+                };
+                frame.render_widget(
+                    Paragraph::new(text).style(style),
+                    Rect::new(inner.x, y, inner.width, 1),
+                );
+            }
+        }
+        frame.render_widget(
+            Paragraph::new("Type to filter  |  Up/Down: select  |  Enter: insert  |  Esc: cancel")
+                .style(
+                    Style::default()
+                        .fg(self.theme.modal_labels)
+                        .bg(self.theme.modal_background),
+                ),
+            Rect::new(
+                inner.x,
+                inner.y + inner.height.saturating_sub(1),
+                inner.width,
+                1,
+            ),
+        );
+    }
+
+    fn render_image_picker(&self, frame: &mut ratatui::Frame, state: &ImagePickerState) {
+        use crate::tui::util::{filter_entries, list_dir_entries};
+        let area = centered_rect(70, 70, frame.area());
+        frame.render_widget(Clear, area);
+        let outer = Block::default()
+            .title(" Pick image ")
+            .borders(Borders::ALL)
+            .style(Style::default().bg(self.theme.modal_background))
+            .border_style(Style::default().fg(self.theme.border_active))
+            .title_style(
+                Style::default()
+                    .fg(self.theme.modal_header)
+                    .add_modifier(Modifier::BOLD),
+            );
+        let inner = outer.inner(area);
+        frame.render_widget(outer, area);
+        if inner.height < 5 || inner.width < 10 {
+            return;
+        }
+        let pad: u16 = 2;
+        let content_x = inner.x + pad;
+        let content_w = inner.width.saturating_sub(pad * 2);
+        let rel = state.cwd.strip_prefix(&state.root).unwrap_or(&state.cwd);
+        let rel_str = rel.to_string_lossy();
+        let cwd_label = if rel_str.is_empty() {
+            "Folder: ./".to_string()
+        } else {
+            format!("Folder: ./{rel_str}")
+        };
+        frame.render_widget(
+            Paragraph::new(cwd_label).style(
+                Style::default()
+                    .fg(self.theme.text_secondary)
+                    .bg(self.theme.modal_background),
+            ),
+            Rect::new(content_x, inner.y, content_w, 1),
+        );
+        frame.render_widget(
+            Paragraph::new(format!("Filter: {}_", state.filter)).style(
+                Style::default()
+                    .fg(self.theme.text_active_focus)
+                    .bg(self.theme.modal_background),
+            ),
+            Rect::new(content_x, inner.y + 1, content_w, 1),
+        );
+        let entries = list_dir_entries(&state.cwd);
+        let filtered = filter_entries(&entries, &state.filter);
+        let body_y = inner.y + 3;
+        let body_h = inner.height.saturating_sub(5);
+        let visible = body_h as usize;
+        let start = if filtered.is_empty() {
+            0
+        } else if state.selected >= visible {
+            state.selected + 1 - visible
+        } else {
+            0
+        };
+        if filtered.is_empty() {
+            frame.render_widget(
+                Paragraph::new("(no matches)").style(
+                    Style::default()
+                        .fg(self.theme.text_secondary)
+                        .bg(self.theme.modal_background),
+                ),
+                Rect::new(content_x, body_y, content_w, 1),
+            );
+        } else {
+            for (i, entry) in filtered.iter().skip(start).take(visible).enumerate() {
+                let row = body_y + i as u16;
+                let is_selected = (start + i) == state.selected;
+                let glyph = if entry.is_dir { "/" } else { " " };
+                let line = format!("{glyph} {}", entry.name);
+                let (fg, bg) = if is_selected {
+                    (self.theme.text_active_focus, self.theme.selected_background)
+                } else if entry.is_dir {
+                    (self.theme.folders, self.theme.modal_background)
+                } else {
+                    (self.theme.files, self.theme.modal_background)
+                };
+                frame.render_widget(
+                    Paragraph::new(line).style(Style::default().fg(fg).bg(bg)),
+                    Rect::new(content_x, row, content_w, 1),
+                );
+            }
+        }
+        frame.render_widget(
+            Paragraph::new("↑/↓ move  |  ← parent  |  →/Enter pick  |  type filter  |  Esc cancel")
+                .style(
+                    Style::default()
+                        .fg(self.theme.modal_labels)
+                        .bg(self.theme.modal_background),
+                ),
+            Rect::new(
+                content_x,
+                inner.y + inner.height.saturating_sub(1),
+                content_w,
+                1,
+            ),
+        );
     }
 }

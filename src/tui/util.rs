@@ -32,3 +32,49 @@ pub(super) fn open_in_browser(target: &str) -> std::io::Result<()> {
         .spawn()?;
     Ok(())
 }
+
+#[derive(Debug, Clone)]
+pub(super) struct DirEntryRow {
+    pub(super) name: String,
+    pub(super) is_dir: bool,
+}
+
+/// List immediate children of `dir`, sorted: subdirs first (alpha), then
+/// files (alpha). Hidden entries (leading dot) are skipped.
+pub(super) fn list_dir_entries(dir: &std::path::Path) -> Vec<DirEntryRow> {
+    let read = match std::fs::read_dir(dir) {
+        Ok(r) => r,
+        Err(_) => return Vec::new(),
+    };
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+    for entry in read.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with('.') {
+            continue;
+        }
+        let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+        let row = DirEntryRow { name, is_dir };
+        if is_dir {
+            dirs.push(row);
+        } else {
+            files.push(row);
+        }
+    }
+    dirs.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    dirs.extend(files);
+    dirs
+}
+
+pub(super) fn filter_entries(entries: &[DirEntryRow], filter: &str) -> Vec<DirEntryRow> {
+    if filter.is_empty() {
+        return entries.to_vec();
+    }
+    let needle = filter.to_lowercase();
+    entries
+        .iter()
+        .filter(|e| e.name.to_lowercase().contains(&needle))
+        .cloned()
+        .collect()
+}

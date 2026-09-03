@@ -18,6 +18,23 @@ impl App {
         use crate::tui::editform;
         use crate::tui::form_textarea::*;
 
+        if matches!(key.code, KeyCode::Char('p')) && key.modifiers.contains(KeyModifiers::CONTROL) {
+            let Some(Modal::FormEdit { state, .. }) = self.modal.as_ref() else {
+                return Some(ModalResult::Continue);
+            };
+            let field_id = match state.form.fields.get(state.focused_field) {
+                Some(f)
+                    if matches!(f.kind, editform::FieldKind::Url { .. })
+                        && super::pickers::is_image_url_field(f.id) =>
+                {
+                    f.id.to_string()
+                }
+                _ => return Some(ModalResult::Continue),
+            };
+            self.open_image_picker(field_id);
+            return Some(ModalResult::Continue);
+        }
+
         if matches!(key.code, KeyCode::Char('s')) && key.modifiers.contains(KeyModifiers::CONTROL) {
             let taken = self.modal.take();
             if let Some(Modal::FormEdit {

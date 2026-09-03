@@ -1,11 +1,23 @@
 use super::*;
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{
+    Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 
 fn send_key(app: &mut App, code: KeyCode, modifiers: KeyModifiers) {
     app.handle_event(Event::Key(KeyEvent::new(code, modifiers)))
         .expect("key event should be handled");
+}
+
+fn send_mouse(app: &mut App, kind: MouseEventKind, column: u16, row: u16) {
+    app.handle_event(Event::Mouse(MouseEvent {
+        kind,
+        column,
+        row,
+        modifiers: KeyModifiers::NONE,
+    }))
+    .expect("mouse event should be handled");
 }
 
 fn chrome_app() -> App {
@@ -563,4 +575,121 @@ fn draw_formedit_does_not_panic() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal.draw(|f| app.draw(f)).expect("draw form");
+}
+
+#[test]
+fn insert_wraps_leaf_on_empty_body() {
+    let mut app = app_with_template();
+    app.selected_row = 2;
+    send_key(&mut app, KeyCode::Char('/'), KeyModifiers::NONE);
+    match &app.modal {
+        Some(Modal::ComponentPicker { .. }) => {}
+        other => panic!("expected ComponentPicker, got {other:?}"),
+    }
+    for c in "mj-text".chars() {
+        send_key(&mut app, KeyCode::Char(c), KeyModifiers::NONE);
+    }
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    assert!(app
+        .toasts
+        .iter()
+        .any(|t| t.message.contains("Wrapped in mj-section")));
+    let nodes = &app.template.as_ref().unwrap().body.nodes;
+    assert_eq!(nodes.len(), 1);
+    match &nodes[0] {
+        crate::model::BodyNode::MjSection(s) => {
+            let crate::model::SectionChild::MjColumn(c) = &s.children[0] else {
+                panic!("expected column");
+            };
+            assert!(matches!(
+                c.components[0],
+                crate::model::ColumnChild::MjText(_)
+            ));
+        }
+        other => panic!("expected section wrap, got {other:?}"),
+    }
+}
+
+#[test]
+fn insert_illegal_on_head_toasts() {
+    let mut app = app_with_template();
+    app.selected_row = 0;
+    app.insert_kind(super::component_kind::ComponentKind::MjText);
+    assert!(app
+        .toasts
+        .iter()
+        .any(|t| t.message.contains("Cannot insert mj-text here")));
+    assert!(app.template.as_ref().unwrap().body.nodes.is_empty());
+}
+
+#[test]
+fn image_picker_writes_relative_path() {
+    let dir = std::env::temp_dir().join(format!("dd_emailforge_5c_img_{}", std::process::id()));
+    let images = dir.join("images");
+    std::fs::create_dir_all(&images).expect("mkdir images");
+    std::fs::write(images.join("hero.png"), b"png").expect("write png");
+    let mut app = app_with_template();
+    app.path = Some(dir.join("template.json"));
+    app.selected_row = 2;
+    send_key(&mut app, KeyCode::Char('/'), KeyModifiers::NONE);
+    for c in "email-header".chars() {
+        send_key(&mut app, KeyCode::Char(c), KeyModifiers::NONE);
+    }
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("email-header"))
+        .expect("header row");
+    app.selected_row = idx;
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    match &app.modal {
+        Some(Modal::FormEdit { state, .. }) => assert_eq!(state.form.fields[0].id, "logo_src"),
+        other => panic!("expected FormEdit, got {other:?}"),
+    }
+    send_key(&mut app, KeyCode::Char('p'), KeyModifiers::CONTROL);
+    match &app.modal {
+        Some(Modal::ImagePicker { .. }) => {}
+        other => panic!("expected ImagePicker, got {other:?}"),
+    }
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    match &app.modal {
+        Some(Modal::FormEdit { state, .. }) => {
+            assert_eq!(state.get("logo_src"), "images/hero.png");
+        }
+        other => panic!("expected FormEdit after pick, got {other:?}"),
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn click_ascii_selects_body_node() {
+    let mut app = app_with_one_column();
+    app.selected_row = 2;
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal.draw(|f| app.draw(f)).expect("draw");
+    let (rect, id) = app
+        .details_hit_areas
+        .iter()
+        .find(|(_, id)| matches!(id, super::tree::TreeId::Path(p) if matches!(p.as_slice(), [super::tree::Step::BodyNode(_)])))
+        .cloned()
+        .expect("body node hit");
+    send_mouse(
+        &mut app,
+        MouseEventKind::Down(MouseButton::Left),
+        rect.x,
+        rect.y,
+    );
+    assert_eq!(app.selected_tree_id(), Some(id));
+}
+
+#[test]
+fn footer_medium_mentions_insert() {
+    let app = app_with_template();
+    let hint = app.footer_hint(80);
+    assert!(
+        hint.contains("/: Insert") || hint.contains("/:Insert"),
+        "{hint}"
+    );
 }

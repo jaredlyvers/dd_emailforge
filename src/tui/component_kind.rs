@@ -1,0 +1,434 @@
+//! Insert-picker kinds and the legal-target table from the design doc.
+use crate::model::{
+    Align, BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
+    HeroMode, ImagePosition, MjButton, MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjSection,
+    MjSocial, MjSpacer, MjTable, MjText, MjWrapper, SectionChild, SocialMode, Template,
+};
+
+use super::tree::{Step, TreeId};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum ComponentKind {
+    EmailHeader,
+    EmailHero,
+    EmailCta,
+    EmailArticle,
+    EmailFooter,
+    MjSection,
+    MjWrapper,
+    MjHero,
+    MjGroup,
+    MjColumn,
+    MjText,
+    MjButton,
+    MjImage,
+    MjDivider,
+    MjSpacer,
+    MjSocial,
+    MjTable,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum KindGroup {
+    Block,
+    Primitive,
+}
+
+impl ComponentKind {
+    pub(super) fn all() -> &'static [Self] {
+        &[
+            Self::EmailHeader,
+            Self::EmailHero,
+            Self::EmailCta,
+            Self::EmailArticle,
+            Self::EmailFooter,
+            Self::MjSection,
+            Self::MjWrapper,
+            Self::MjHero,
+            Self::MjGroup,
+            Self::MjColumn,
+            Self::MjText,
+            Self::MjButton,
+            Self::MjImage,
+            Self::MjDivider,
+            Self::MjSpacer,
+            Self::MjSocial,
+            Self::MjTable,
+        ]
+    }
+
+    pub(super) fn label(self) -> &'static str {
+        match self {
+            Self::EmailHeader => "email-header",
+            Self::EmailHero => "email-hero",
+            Self::EmailCta => "email-cta",
+            Self::EmailArticle => "email-article",
+            Self::EmailFooter => "email-footer",
+            Self::MjSection => "mj-section",
+            Self::MjWrapper => "mj-wrapper",
+            Self::MjHero => "mj-hero",
+            Self::MjGroup => "mj-group",
+            Self::MjColumn => "mj-column",
+            Self::MjText => "mj-text",
+            Self::MjButton => "mj-button",
+            Self::MjImage => "mj-image",
+            Self::MjDivider => "mj-divider",
+            Self::MjSpacer => "mj-spacer",
+            Self::MjSocial => "mj-social",
+            Self::MjTable => "mj-table",
+        }
+    }
+
+    pub(super) fn group(self) -> KindGroup {
+        match self {
+            Self::EmailHeader
+            | Self::EmailHero
+            | Self::EmailCta
+            | Self::EmailArticle
+            | Self::EmailFooter => KindGroup::Block,
+            _ => KindGroup::Primitive,
+        }
+    }
+
+    pub(super) fn is_block(self) -> bool {
+        matches!(self.group(), KindGroup::Block)
+    }
+
+    pub(super) fn is_layout(self) -> bool {
+        matches!(self, Self::MjSection | Self::MjWrapper | Self::MjHero)
+    }
+
+    pub(super) fn is_leaf(self) -> bool {
+        matches!(
+            self,
+            Self::MjText
+                | Self::MjButton
+                | Self::MjImage
+                | Self::MjDivider
+                | Self::MjSpacer
+                | Self::MjSocial
+                | Self::MjTable
+        )
+    }
+
+    pub(super) fn legal_for(self, class: SelectionClass) -> bool {
+        match class {
+            SelectionClass::HeadBrand => false,
+            SelectionClass::Body | SelectionClass::EmailBlock => {
+                self.is_block() || self.is_layout() || self.is_leaf()
+            }
+            SelectionClass::Section { in_wrapper } => {
+                if self.is_block() || self == Self::MjWrapper {
+                    !in_wrapper
+                } else {
+                    self.is_layout()
+                        || matches!(self, Self::MjGroup | Self::MjColumn)
+                        || self.is_leaf()
+                }
+            }
+            SelectionClass::Wrapper => matches!(self, Self::MjSection | Self::MjHero),
+            SelectionClass::Hero => self.is_leaf(),
+            SelectionClass::Group => self == Self::MjColumn,
+            SelectionClass::Column => self == Self::MjColumn || self.is_leaf(),
+            SelectionClass::Leaf => self.is_leaf(),
+        }
+    }
+
+    pub(super) fn as_body_node(self) -> Option<BodyNode> {
+        Some(match self {
+            Self::EmailHeader => BodyNode::EmailHeader(EmailHeader {
+                logo_src: String::new(),
+                logo_alt: String::new(),
+                logo_href: None,
+                logo_width: "160px".into(),
+                background_color: None,
+            }),
+            Self::EmailHero => BodyNode::EmailHero(EmailHero {
+                image_src: String::new(),
+                image_alt: String::new(),
+                heading: "Heading".into(),
+                subheading: String::new(),
+                background_color: None,
+            }),
+            Self::EmailCta => BodyNode::EmailCta(EmailCta {
+                heading: "Heading".into(),
+                copy: String::new(),
+                button_label: "Read more".into(),
+                button_href: "https://example.com".into(),
+                background_color: None,
+            }),
+            Self::EmailArticle => BodyNode::EmailArticle(EmailArticle {
+                image_src: String::new(),
+                image_alt: String::new(),
+                title: "Title".into(),
+                copy: String::new(),
+                link_label: String::new(),
+                link_href: String::new(),
+                image_position: ImagePosition::Top,
+            }),
+            Self::EmailFooter => BodyNode::EmailFooter(EmailFooter {
+                company_name: String::new(),
+                address_lines: vec!["123 Main St".into()],
+                unsubscribe_label: "Unsubscribe".into(),
+                unsubscribe_href: "*|UNSUB|*".into(),
+                social: Vec::new(),
+                copyright: None,
+            }),
+            Self::MjSection => BodyNode::MjSection(empty_section()),
+            Self::MjWrapper => BodyNode::MjWrapper(MjWrapper {
+                background_color: None,
+                padding: None,
+                full_width: false,
+                children: Vec::new(),
+            }),
+            Self::MjHero => BodyNode::MjHero(empty_hero()),
+            _ => return None,
+        })
+    }
+
+    pub(super) fn as_leaf(self) -> Option<ColumnChild> {
+        Some(match self {
+            Self::MjText => ColumnChild::MjText(MjText {
+                content: "Write something.".into(),
+                align: None,
+                font_size: None,
+                font_family: None,
+                color: None,
+                padding: None,
+            }),
+            Self::MjButton => ColumnChild::MjButton(MjButton {
+                content: "Read more".into(),
+                href: "https://example.com".into(),
+                background_color: None,
+                color: None,
+                align: Some(Align::Center),
+                font_family: None,
+                border_radius: None,
+                width: None,
+                padding: None,
+            }),
+            Self::MjImage => ColumnChild::MjImage(MjImage {
+                src: "https://dummyimage.com/600x200/cccccc/000000".into(),
+                alt: "Image".into(),
+                href: None,
+                width: None,
+                align: None,
+                fluid_on_mobile: true,
+                padding: None,
+            }),
+            Self::MjDivider => ColumnChild::MjDivider(MjDivider {
+                border_color: None,
+                border_width: None,
+                padding: None,
+            }),
+            Self::MjSpacer => ColumnChild::MjSpacer(MjSpacer {
+                height: "24px".into(),
+            }),
+            Self::MjSocial => ColumnChild::MjSocial(MjSocial {
+                mode: SocialMode::Horizontal,
+                align: None,
+                icon_size: "32px".into(),
+                elements: Vec::new(),
+            }),
+            Self::MjTable => ColumnChild::MjTable(MjTable {
+                content: "<table><tr><td></td></tr></table>".into(),
+                font_size: None,
+                color: None,
+                padding: None,
+            }),
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum SelectionClass {
+    HeadBrand,
+    Body,
+    EmailBlock,
+    Section { in_wrapper: bool },
+    Wrapper,
+    Hero,
+    Group,
+    Column,
+    Leaf,
+}
+
+pub(super) fn classify(template: Option<&Template>, id: &TreeId) -> SelectionClass {
+    match id {
+        TreeId::Head | TreeId::Brand => SelectionClass::HeadBrand,
+        TreeId::Body => SelectionClass::Body,
+        TreeId::Path(path) => classify_path(template, path),
+    }
+}
+
+fn classify_path(template: Option<&Template>, path: &[Step]) -> SelectionClass {
+    let Some(last) = path.last() else {
+        return SelectionClass::Body;
+    };
+    match last {
+        Step::ColComp(_) | Step::HeroChild(_) => SelectionClass::Leaf,
+        Step::GroupCol(_) => SelectionClass::Column,
+        Step::SectionChild(_) => {
+            let Some(t) = template else {
+                return SelectionClass::Column;
+            };
+            match locate_section_child(t, path) {
+                Some(SectionChild::MjGroup(_)) => SelectionClass::Group,
+                _ => SelectionClass::Column,
+            }
+        }
+        Step::BodyNode(_) | Step::WrapperChild(_) => {
+            let in_wrapper = path.iter().any(|s| matches!(s, Step::WrapperChild(_)));
+            match body_node_at(template, path) {
+                Some(BodyNode::MjSection(_)) => SelectionClass::Section { in_wrapper },
+                Some(BodyNode::MjWrapper(_)) => SelectionClass::Wrapper,
+                Some(BodyNode::MjHero(_)) => SelectionClass::Hero,
+                Some(
+                    BodyNode::EmailHeader(_)
+                    | BodyNode::EmailHero(_)
+                    | BodyNode::EmailCta(_)
+                    | BodyNode::EmailArticle(_)
+                    | BodyNode::EmailFooter(_),
+                ) => SelectionClass::EmailBlock,
+                None => SelectionClass::Body,
+            }
+        }
+    }
+}
+
+fn body_node_at<'a>(template: Option<&'a Template>, path: &[Step]) -> Option<&'a BodyNode> {
+    let t = template?;
+    let mut node: Option<&BodyNode> = None;
+    for step in path {
+        match step {
+            Step::BodyNode(i) => node = t.body.nodes.get(*i),
+            Step::WrapperChild(i) => {
+                let BodyNode::MjWrapper(w) = node? else {
+                    return None;
+                };
+                node = w.children.get(*i);
+            }
+            _ => break,
+        }
+    }
+    node
+}
+
+fn locate_section_child<'a>(t: &'a Template, path: &[Step]) -> Option<&'a SectionChild> {
+    let (last, parent) = path.split_last()?;
+    let Step::SectionChild(i) = last else {
+        return None;
+    };
+    match body_node_at(Some(t), parent)? {
+        BodyNode::MjSection(s) => s.children.get(*i),
+        _ => None,
+    }
+}
+
+pub(super) fn empty_column() -> MjColumn {
+    MjColumn {
+        width: None,
+        background_color: None,
+        padding: None,
+        inner_background_color: None,
+        components: Vec::new(),
+    }
+}
+
+pub(super) fn empty_section() -> MjSection {
+    MjSection {
+        background_color: None,
+        padding: None,
+        full_width: false,
+        children: Vec::new(),
+    }
+}
+
+pub(super) fn empty_hero() -> MjHero {
+    MjHero {
+        mode: HeroMode::FluidHeight,
+        background_url: None,
+        background_color: None,
+        background_height: None,
+        width: None,
+        height: None,
+        children: Vec::new(),
+    }
+}
+
+pub(super) fn empty_group() -> MjGroup {
+    MjGroup {
+        width: None,
+        background_color: None,
+        children: vec![empty_column()],
+    }
+}
+
+pub(super) fn wrap_leaf_in_section(leaf: ColumnChild) -> BodyNode {
+    let mut col = empty_column();
+    col.width = Some("100%".into());
+    col.components.push(leaf);
+    BodyNode::MjSection(MjSection {
+        background_color: None,
+        padding: None,
+        full_width: false,
+        children: vec![SectionChild::MjColumn(col)],
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(super) enum PickerRow {
+    Header(&'static str),
+    Kind(ComponentKind),
+}
+
+pub(super) fn picker_rows(class: SelectionClass, query: &str) -> Vec<PickerRow> {
+    let needle = query.trim().to_lowercase();
+    let mut blocks = Vec::new();
+    let mut prims = Vec::new();
+    for &kind in ComponentKind::all() {
+        if !kind.legal_for(class) {
+            continue;
+        }
+        if !needle.is_empty() && !kind.label().contains(&needle) {
+            continue;
+        }
+        match kind.group() {
+            KindGroup::Block => blocks.push(kind),
+            KindGroup::Primitive => prims.push(kind),
+        }
+    }
+    let mut rows = Vec::new();
+    if !blocks.is_empty() {
+        rows.push(PickerRow::Header("-- blocks --"));
+        rows.extend(blocks.into_iter().map(PickerRow::Kind));
+    }
+    if !prims.is_empty() {
+        rows.push(PickerRow::Header("-- primitives --"));
+        rows.extend(prims.into_iter().map(PickerRow::Kind));
+    }
+    rows
+}
+
+pub(super) fn first_kind_index(rows: &[PickerRow]) -> usize {
+    rows.iter()
+        .position(|r| matches!(r, PickerRow::Kind(_)))
+        .unwrap_or(0)
+}
+
+pub(super) fn move_picker_selection(rows: &[PickerRow], selected: usize, delta: isize) -> usize {
+    if rows.is_empty() {
+        return 0;
+    }
+    let mut i = selected.min(rows.len() - 1);
+    let len = rows.len() as isize;
+    for _ in 0..rows.len() {
+        let next = (i as isize + delta).rem_euclid(len) as usize;
+        i = next;
+        if matches!(rows[i], PickerRow::Kind(_)) {
+            return i;
+        }
+    }
+    i
+}
