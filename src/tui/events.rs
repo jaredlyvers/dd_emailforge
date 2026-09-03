@@ -11,10 +11,8 @@ impl App {
                         self.help_scroll = 0;
                     }
                     KeyCode::Down | KeyCode::Char('j') => {
-                        self.help_scroll = self
-                            .help_scroll
-                            .saturating_add(1)
-                            .min(self.help_scroll_max);
+                        self.help_scroll =
+                            self.help_scroll.saturating_add(1).min(self.help_scroll_max);
                     }
                     KeyCode::Up | KeyCode::Char('k') => {
                         self.help_scroll = self.help_scroll.saturating_sub(1);
@@ -41,10 +39,8 @@ impl App {
                         self.help_scroll = self.help_scroll.saturating_sub(3);
                     }
                     MouseEventKind::ScrollDown => {
-                        self.help_scroll = self
-                            .help_scroll
-                            .saturating_add(3)
-                            .min(self.help_scroll_max);
+                        self.help_scroll =
+                            self.help_scroll.saturating_add(3).min(self.help_scroll_max);
                     }
                     _ => {}
                 },
@@ -128,12 +124,130 @@ impl App {
                 KeyCode::Char('q') if k.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.request_quit();
                 }
-                _ => {}
+                KeyCode::Tab | KeyCode::BackTab => {
+                    if self.details_visible {
+                        self.pane = match self.pane {
+                            super::tree::PaneFocus::Structure => super::tree::PaneFocus::Details,
+                            super::tree::PaneFocus::Details => super::tree::PaneFocus::Structure,
+                        };
+                    }
+                }
+                KeyCode::Enter => self.tree_enter(),
+                _ => self.handle_tree_nav(k),
             },
-            Event::Mouse(_) => {}
+            Event::Mouse(m) => self.handle_tree_mouse(m),
             _ => {}
         }
 
         Ok(())
     }
+
+    fn handle_tree_nav(&mut self, k: event::KeyEvent) {
+        use super::tree::PaneFocus;
+        let details = self.pane == PaneFocus::Details && self.details_visible;
+        match k.code {
+            KeyCode::Down | KeyCode::Char('j') if !details => self.tree_move(1),
+            KeyCode::Up | KeyCode::Char('k') if !details => self.tree_move(-1),
+            KeyCode::Down | KeyCode::Char('j') if details => {
+                self.details_scroll = (self.details_scroll + 1).min(self.details_scroll_max);
+            }
+            KeyCode::Up | KeyCode::Char('k') if details => {
+                self.details_scroll = self.details_scroll.saturating_sub(1);
+            }
+            KeyCode::PageDown if details => {
+                self.details_scroll = (self.details_scroll + 10).min(self.details_scroll_max);
+            }
+            KeyCode::PageUp if details => {
+                self.details_scroll = self.details_scroll.saturating_sub(10);
+            }
+            KeyCode::PageDown => self.tree_move(10),
+            KeyCode::PageUp => self.tree_move(-10),
+            KeyCode::Home | KeyCode::Char('g') if !k.modifiers.contains(KeyModifiers::SHIFT) => {
+                if details {
+                    self.details_scroll = 0;
+                } else {
+                    self.tree_home();
+                }
+            }
+            KeyCode::End | KeyCode::Char('G') => {
+                if details {
+                    self.details_scroll = self.details_scroll_max;
+                } else {
+                    self.tree_end();
+                }
+            }
+            KeyCode::Left | KeyCode::Char('h')
+                if !k.modifiers.contains(KeyModifiers::CONTROL) && !details =>
+            {
+                self.tree_collapse();
+            }
+            KeyCode::Right | KeyCode::Char('l')
+                if !k.modifiers.contains(KeyModifiers::CONTROL) && !details =>
+            {
+                self.tree_expand();
+            }
+            KeyCode::Char(' ') if !details => self.tree_toggle_expand(),
+            _ => {}
+        }
+    }
+
+    fn handle_tree_mouse(&mut self, m: event::MouseEvent) {
+        use super::tree::PaneFocus;
+        let (x, y) = (m.column, m.row);
+        let in_tree = contains(self.tree_area, x, y);
+        let in_details = self.details_visible && contains(self.details_area, x, y);
+        match m.kind {
+            MouseEventKind::ScrollUp if in_details => {
+                self.details_scroll = self.details_scroll.saturating_sub(3);
+            }
+            MouseEventKind::ScrollDown if in_details => {
+                self.details_scroll = (self.details_scroll + 3).min(self.details_scroll_max);
+            }
+            MouseEventKind::ScrollUp if in_tree => {
+                self.tree_scroll = self.tree_scroll.saturating_sub(3);
+            }
+            MouseEventKind::ScrollDown if in_tree => {
+                let visible = self.tree_area.height.saturating_sub(2) as usize;
+                let max_scroll = self.tree_rows().len().saturating_sub(visible);
+                self.tree_scroll = (self.tree_scroll + 3).min(max_scroll);
+            }
+            MouseEventKind::Down(MouseButton::Left) if in_tree => {
+                self.pane = PaneFocus::Structure;
+                let inner_y = self.tree_area.y.saturating_add(1);
+                if y >= inner_y {
+                    let idx = self.tree_scroll + (y - inner_y) as usize;
+                    let n = self.tree_rows().len();
+                    if idx < n {
+                        self.selected_row = idx;
+                        let glyph = x < self.tree_area.x.saturating_add(6);
+                        if glyph {
+                            self.tree_toggle_expand();
+                        }
+                        let now = std::time::Instant::now();
+                        if let Some((px, py, t0)) = self.last_click {
+                            if px == x
+                                && py == y
+                                && now.duration_since(t0).as_millis()
+                                    < super::DOUBLE_CLICK_THRESHOLD_MS
+                            {
+                                self.tree_enter();
+                            }
+                        }
+                        self.last_click = Some((x, y, now));
+                    }
+                }
+            }
+            MouseEventKind::Down(MouseButton::Left) if in_details => {
+                self.pane = PaneFocus::Details;
+            }
+            _ => {}
+        }
+    }
+}
+
+fn contains(area: Rect, x: u16, y: u16) -> bool {
+    x >= area.x
+        && x < area.x.saturating_add(area.width)
+        && y >= area.y
+        && y < area.y.saturating_add(area.height)
 }

@@ -40,15 +40,7 @@ impl App {
         }
 
         self.body_area = root[1];
-        let body = Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(self.theme.border_default))
-            .style(
-                Style::default()
-                    .fg(self.theme.text_primary)
-                    .bg(self.theme.body_background),
-            );
-        frame.render_widget(body, root[1]);
+        self.render_body(frame, root[1]);
 
         let footer_text = self.footer_hint(root[2].width);
         let footer = Paragraph::new(footer_text).style(self.theme.app_shell);
@@ -73,6 +65,162 @@ impl App {
         }
 
         self.render_toasts(frame, frame.area());
+    }
+
+    fn render_body(&mut self, frame: &mut ratatui::Frame, area: Rect) {
+        use super::details::{details_lines, details_title};
+        use super::tree::{master_detail_tree_width, selected_label, PaneFocus};
+
+        self.clamp_tree_selection();
+        let rows = self.tree_rows();
+        let tree_w = master_detail_tree_width(area.width);
+        self.details_visible = tree_w.is_some();
+        if !self.details_visible && self.pane == PaneFocus::Details {
+            self.pane = PaneFocus::Structure;
+        }
+
+        let (tree_area, details_area) = if let Some(tw) = tree_w {
+            let split = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Length(tw), Constraint::Min(0)])
+                .split(area);
+            (split[0], split[1])
+        } else {
+            (area, Rect::default())
+        };
+        self.tree_area = tree_area;
+        self.details_area = details_area;
+
+        let tree_active = self.pane == PaneFocus::Structure;
+        let tree_border = if tree_active {
+            self.theme.border_active
+        } else {
+            self.theme.border_default
+        };
+        let tree_block = Block::default()
+            .title("Structure")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(tree_border))
+            .style(
+                Style::default()
+                    .fg(self.theme.text_primary)
+                    .bg(self.theme.body_background),
+            );
+        let tree_inner = tree_block.inner(tree_area);
+        frame.render_widget(tree_block, tree_area);
+
+        let visible = tree_inner.height as usize;
+        if self.selected_row < self.tree_scroll {
+            self.tree_scroll = self.selected_row;
+        }
+        if visible > 0 && self.selected_row >= self.tree_scroll + visible {
+            self.tree_scroll = self.selected_row + 1 - visible;
+        }
+
+        let lines: Vec<Line> = rows
+            .iter()
+            .enumerate()
+            .map(|(i, row)| {
+                let text = format!("{}{}", row.prefix, row.label);
+                let style = if i == self.selected_row {
+                    Style::default()
+                        .fg(self.theme.text_active_focus)
+                        .bg(self.theme.selected_background)
+                } else {
+                    Style::default().fg(self.theme.text_primary)
+                };
+                Line::from(Span::styled(text, style))
+            })
+            .collect();
+        frame.render_widget(
+            Paragraph::new(lines)
+                .style(
+                    Style::default()
+                        .fg(self.theme.text_primary)
+                        .bg(self.theme.body_background),
+                )
+                .scroll((self.tree_scroll as u16, 0)),
+            tree_inner,
+        );
+        let max_tree_scroll = rows.len().saturating_sub(visible);
+        if self.tree_scroll > max_tree_scroll {
+            self.tree_scroll = max_tree_scroll;
+        }
+        if rows.len() > visible && visible > 0 {
+            paint_scrollbar(
+                frame,
+                tree_inner,
+                self.tree_scroll,
+                rows.len(),
+                self.theme.scrollbar,
+                self.theme.scrollbar_hover,
+                self.theme.body_background,
+            );
+        }
+
+        if details_area.width == 0 {
+            return;
+        }
+        let details_active = self.pane == PaneFocus::Details;
+        let details_border = if details_active {
+            self.theme.border_active
+        } else {
+            self.theme.border_default
+        };
+        let label = selected_label(&rows, self.selected_row);
+        let details_block = Block::default()
+            .title(details_title(&label))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(details_border))
+            .style(
+                Style::default()
+                    .fg(self.theme.text_primary)
+                    .bg(self.theme.body_background),
+            );
+        let details_inner = details_block.inner(details_area);
+        frame.render_widget(details_block, details_area);
+
+        let text_lines = details_lines(
+            self.template.as_ref(),
+            rows.get(self.selected_row),
+            details_inner.width as usize,
+        );
+        self.details_scroll_max = text_lines
+            .len()
+            .saturating_sub(details_inner.height as usize);
+        if self.details_scroll > self.details_scroll_max {
+            self.details_scroll = self.details_scroll_max;
+        }
+        let para_lines: Vec<Line> = text_lines
+            .iter()
+            .map(|l| {
+                Line::from(Span::styled(
+                    l.clone(),
+                    Style::default().fg(self.theme.text_primary),
+                ))
+            })
+            .collect();
+        frame.render_widget(
+            Paragraph::new(para_lines)
+                .style(
+                    Style::default()
+                        .fg(self.theme.text_primary)
+                        .bg(self.theme.body_background),
+                )
+                .scroll((self.details_scroll as u16, 0)),
+            details_inner,
+        );
+        if text_lines.len() > details_inner.height as usize && details_inner.height > 0 {
+            paint_scrollbar(
+                frame,
+                details_inner,
+                self.details_scroll,
+                text_lines.len(),
+                self.theme.scrollbar,
+                self.theme.scrollbar_hover,
+                self.theme.body_background,
+            );
+        }
     }
 
     fn render_scroll_modal(&mut self, frame: &mut ratatui::Frame, title: &str, is_help: bool) {
@@ -165,8 +313,7 @@ impl App {
             let total_h = inner.height as usize;
             let thumb_h = ((total_h * total_h) / wrapped_total.max(1)).max(1);
             let scroll_range = wrapped_total.saturating_sub(total_h).max(1);
-            let thumb_top =
-                ((scroll as usize) * total_h.saturating_sub(thumb_h)) / scroll_range;
+            let thumb_top = ((scroll as usize) * total_h.saturating_sub(thumb_h)) / scroll_range;
             for i in 0..thumb_h {
                 let cell = Paragraph::new("█").style(
                     Style::default()
@@ -184,6 +331,47 @@ impl App {
                 );
             }
         }
+    }
+}
+
+fn paint_scrollbar(
+    frame: &mut ratatui::Frame,
+    inner: Rect,
+    scroll: usize,
+    total: usize,
+    scrollbar: ratatui::style::Color,
+    hover: ratatui::style::Color,
+    bg: ratatui::style::Color,
+) {
+    if inner.height == 0 || inner.width == 0 {
+        return;
+    }
+    let track_x = inner.x + inner.width.saturating_sub(1);
+    for row in 0..inner.height {
+        frame.render_widget(
+            Paragraph::new("│").style(Style::default().fg(scrollbar).bg(bg)),
+            Rect {
+                x: track_x,
+                y: inner.y + row,
+                width: 1,
+                height: 1,
+            },
+        );
+    }
+    let total_h = inner.height as usize;
+    let thumb_h = ((total_h * total_h) / total.max(1)).max(1);
+    let scroll_range = total.saturating_sub(total_h).max(1);
+    let thumb_top = (scroll * total_h.saturating_sub(thumb_h)) / scroll_range;
+    for i in 0..thumb_h {
+        frame.render_widget(
+            Paragraph::new("█").style(Style::default().fg(hover).bg(bg)),
+            Rect {
+                x: track_x,
+                y: inner.y + (thumb_top + i) as u16,
+                width: 1,
+                height: 1,
+            },
+        );
     }
 }
 

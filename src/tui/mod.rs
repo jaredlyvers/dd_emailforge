@@ -1,9 +1,11 @@
+use std::collections::HashSet;
 use std::io;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub(super) use crossterm::event::{
-    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind,
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseButton,
+    MouseEventKind,
 };
 use crossterm::execute;
 use crossterm::terminal::{
@@ -12,6 +14,7 @@ use crossterm::terminal::{
 use ratatui::backend::CrosstermBackend;
 pub(super) use ratatui::layout::{Constraint, Direction, Layout, Rect};
 pub(super) use ratatui::style::{Modifier, Style};
+pub(super) use ratatui::text::{Line, Span};
 pub(super) use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 use ratatui::Terminal;
 
@@ -20,6 +23,7 @@ use crate::storage;
 
 pub(in crate::tui) use draw::centered_rect;
 
+mod details;
 mod draw;
 mod events;
 mod export;
@@ -27,7 +31,10 @@ mod help;
 mod modals;
 mod theme;
 mod toasts;
+mod tree;
 mod util;
+
+pub(super) const DOUBLE_CLICK_THRESHOLD_MS: u128 = 420;
 #[cfg(test)]
 mod tests;
 
@@ -84,7 +91,8 @@ pub fn run_tui(path: Option<PathBuf>) -> anyhow::Result<()> {
     if let (Some(p), Some(_)) = (app.path.as_ref(), app.template.as_ref()) {
         let backup = storage::backup_path_for(p);
         if backup.exists() && p.exists() {
-            if let (Ok(main), Ok(bak)) = (std::fs::read_to_string(p), std::fs::read_to_string(&backup))
+            if let (Ok(main), Ok(bak)) =
+                (std::fs::read_to_string(p), std::fs::read_to_string(&backup))
             {
                 if main != bak {
                     app.push_toast(
@@ -130,6 +138,16 @@ pub(super) struct App {
     dirty_since: Option<std::time::Instant>,
     last_saved_json: String,
     preview: Option<crate::preview::PreviewSession>,
+    pane: tree::PaneFocus,
+    selected_row: usize,
+    collapsed: HashSet<tree::TreeId>,
+    tree_area: Rect,
+    details_area: Rect,
+    tree_scroll: usize,
+    details_scroll: usize,
+    details_scroll_max: usize,
+    details_visible: bool,
+    last_click: Option<(u16, u16, Instant)>,
 }
 
 impl App {
@@ -166,6 +184,16 @@ impl App {
             dirty_since: None,
             last_saved_json,
             preview: None,
+            pane: tree::PaneFocus::Structure,
+            selected_row: 0,
+            collapsed: HashSet::new(),
+            tree_area: Rect::default(),
+            details_area: Rect::default(),
+            tree_scroll: 0,
+            details_scroll: 0,
+            details_scroll_max: 0,
+            details_visible: false,
+            last_click: None,
         }
     }
 
@@ -197,7 +225,9 @@ impl App {
                 &["F1:Help", "Esc:Close", "Ctrl+Q:Quit"]
             }
         } else if width < 80 {
-            &["F1:Help", "F2:Theme", "F3:Val", "p:Prev", "s:Save", "C-q:Quit"]
+            &[
+                "F1:Help", "F2:Theme", "F3:Val", "p:Prev", "s:Save", "C-q:Quit",
+            ]
         } else if width < 120 {
             &[
                 "F1: Help",
@@ -238,10 +268,7 @@ impl App {
         }
     }
 
-    pub(super) fn commit_save_with_backup(
-        &mut self,
-        path: &std::path::Path,
-    ) -> anyhow::Result<()> {
+    pub(super) fn commit_save_with_backup(&mut self, path: &std::path::Path) -> anyhow::Result<()> {
         let Some(template) = self.template.as_ref() else {
             anyhow::bail!("no template open");
         };
