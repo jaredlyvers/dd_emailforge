@@ -133,6 +133,25 @@ impl App {
                     }
                 }
                 KeyCode::Enter => self.tree_enter(),
+                KeyCode::Char('d') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.delete_selected_row();
+                }
+                KeyCode::Char('y') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.duplicate_selected_row();
+                }
+                KeyCode::Char('u') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.undo_last();
+                }
+                KeyCode::Char('J') => self.reorder_selected(1),
+                KeyCode::Char('K') => self.reorder_selected(-1),
+                KeyCode::Char('C') => self.add_column(),
+                KeyCode::Char('V') => self.remove_column(),
+                KeyCode::Char('c') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.hop_column(-1);
+                }
+                KeyCode::Char('v') if !k.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.hop_column(1);
+                }
                 _ => self.handle_tree_nav(k),
             },
             Event::Mouse(m) => self.handle_tree_mouse(m),

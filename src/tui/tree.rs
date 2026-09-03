@@ -437,7 +437,34 @@ impl App {
     }
 
     pub(in crate::tui) fn tree_enter(&mut self) {
-        self.push_toast(ToastLevel::Info, "Editing lands in the next slice");
+        let Some(template) = self.template.as_ref() else {
+            self.push_toast(
+                ToastLevel::Warning,
+                "No template open. Run: dd_emailforge init <dir>",
+            );
+            return;
+        };
+        let rows = self.tree_rows();
+        let Some(row) = rows.get(self.selected_row) else {
+            return;
+        };
+        let Some(state) = crate::tui::cursor::form_for(template, &row.id) else {
+            self.push_toast(ToastLevel::Warning, "Nothing to edit here.");
+            return;
+        };
+        let cursor_pos = state
+            .form
+            .fields
+            .first()
+            .map(|f| state.get(f.id).chars().count())
+            .unwrap_or(0);
+        self.modal = Some(super::Modal::FormEdit {
+            cursor: row.id.clone(),
+            state,
+            cursor_pos,
+            scroll_offset: 0,
+            drill_stack: Vec::new(),
+        });
     }
 }
 

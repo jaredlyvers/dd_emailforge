@@ -151,8 +151,33 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("g / G", "First / last row"),
             ("h / l", "Collapse / expand"),
             ("Space", "Toggle expand"),
-            ("Enter", "Edit (next slice)"),
+            ("Enter", "Edit selected (FormEdit)"),
             ("Tab", "Focus Structure ↔ Details"),
+            ("d", "Delete (not HEAD/BRAND/BODY)"),
+            ("y", "Duplicate after"),
+            ("u", "Undo (cap 20)"),
+            ("J / K", "Reorder sibling down / up"),
+            ("C / V", "Add / remove column"),
+            ("c / v", "Prev / next column"),
+        ],
+        "•",
+        h_style,
+        k_style,
+        div_style,
+        width,
+    );
+
+    add_section(
+        &mut lines,
+        "FormEdit",
+        &[
+            ("Tab / Shift+Tab", "Next / previous field"),
+            ("Up / Down", "Previous / next field (textarea: move line)"),
+            ("Left / Right", "Cycle enum, or move cursor"),
+            ("A / X", "Add / remove collection row (fonts, social)"),
+            ("Ctrl+S", "Save (or return from a drilled-in item)"),
+            ("Esc", "Cancel"),
+            ("Click field", "Focus that input"),
         ],
         "•",
         h_style,
@@ -168,7 +193,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("Wheel", "Scroll the pane under the cursor"),
             ("Click tree row", "Select (glyph column expands)"),
             ("Click pane", "Focus Structure or Details"),
-            ("Double-click", "Same as Enter (edit lands next slice)"),
+            ("Double-click", "Same as Enter (open FormEdit)"),
         ],
         "•",
         h_style,
@@ -179,7 +204,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
 
     lines.push(Line::from(Span::styled("Notes", h_style)));
     lines.push(Line::from(""));
-    let note = "Autosave rewrites template.json 2s after a change when a path is set. Manual s also writes template.json.backup. JSON-LD and CSS may be invalid while typing; F3 / export / preview require them to parse. FormEdit, insert, and delete land in the next slices.";
+    let note = "Autosave rewrites template.json 2s after a change when a path is set. Manual s also writes template.json.backup. JSON-LD and CSS may be invalid while typing; F3 / export / preview require them to parse. Insert picker and image picker land in the next slice.";
     for chunk in wrap_to_lines(note, width.saturating_sub(2)) {
         lines.push(Line::from(Span::raw(format!("  {}", chunk))));
     }

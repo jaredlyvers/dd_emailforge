@@ -1,12 +1,19 @@
-//! Minimal PR 2 modals: load error, save path, confirm quit, validation errors.
+//! Modals: load/save/confirm/validate, mjml, and FormEdit.
 
 mod events;
+mod form_edit;
 mod paint;
+
+pub(in crate::tui) use form_edit::DrillFrame;
 
 #[derive(Debug)]
 pub(in crate::tui) enum Modal {
-    LoadError { message: String },
-    SavePrompt { path: String },
+    LoadError {
+        message: String,
+    },
+    SavePrompt {
+        path: String,
+    },
     ConfirmPrompt {
         message: String,
         on_confirm: ConfirmKind,
@@ -15,8 +22,20 @@ pub(in crate::tui) enum Modal {
         errors: Vec<String>,
         scroll_offset: usize,
     },
-    MjmlMissing { searched: Vec<String> },
-    MjmlCompileError { stderr: String, scroll: u16 },
+    MjmlMissing {
+        searched: Vec<String>,
+    },
+    MjmlCompileError {
+        stderr: String,
+        scroll: u16,
+    },
+    FormEdit {
+        state: crate::tui::editform::EditFormState,
+        cursor: crate::tui::tree::TreeId,
+        cursor_pos: usize,
+        scroll_offset: u16,
+        drill_stack: Vec<DrillFrame>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

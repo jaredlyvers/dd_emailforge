@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::io;
 use std::path::PathBuf;
@@ -23,10 +24,14 @@ use crate::storage;
 
 pub(in crate::tui) use draw::centered_rect;
 
+mod cursor;
 mod details;
 mod draw;
+mod editform;
+mod edits;
 mod events;
 mod export;
+mod form_textarea;
 mod help;
 mod modals;
 mod theme;
@@ -148,6 +153,8 @@ pub(super) struct App {
     details_scroll_max: usize,
     details_visible: bool,
     last_click: Option<(u16, u16, Instant)>,
+    undo_stack: Vec<Template>,
+    form_field_areas: RefCell<Vec<(Rect, usize)>>,
 }
 
 impl App {
@@ -194,6 +201,8 @@ impl App {
             details_scroll_max: 0,
             details_visible: false,
             last_click: None,
+            undo_stack: Vec::new(),
+            form_field_areas: RefCell::new(Vec::new()),
         }
     }
 

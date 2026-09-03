@@ -1,0 +1,415 @@
+//! FormEdit key handling, drill-down, and field edits.
+use super::super::*;
+
+#[derive(Debug, Clone)]
+pub(in crate::tui) struct DrillFrame {
+    pub parent_state: super::super::editform::EditFormState,
+    pub parent_cursor_pos: usize,
+    pub parent_scroll_offset: u16,
+    pub subform_field_id: String,
+    pub item_idx: usize,
+}
+
+impl App {
+    pub(in crate::tui) fn handle_form_edit_event(
+        &mut self,
+        key: event::KeyEvent,
+    ) -> Option<ModalResult> {
+        use crate::tui::editform;
+        use crate::tui::form_textarea::*;
+
+        if matches!(key.code, KeyCode::Char('s')) && key.modifiers.contains(KeyModifiers::CONTROL) {
+            let taken = self.modal.take();
+            if let Some(Modal::FormEdit {
+                state,
+                cursor,
+                cursor_pos,
+                mut drill_stack,
+                scroll_offset: _,
+            }) = taken
+            {
+                if let Some(frame) = drill_stack.pop() {
+                    let mut parent = frame.parent_state;
+                    let items = parent
+                        .sub_state
+                        .entry(frame.subform_field_id.clone())
+                        .or_default();
+                    if frame.item_idx < items.len() {
+                        items[frame.item_idx] = state;
+                    } else {
+                        items.push(state);
+                    }
+                    self.push_toast(ToastLevel::Success, "Item saved — editing parent.");
+                    self.modal = Some(Modal::FormEdit {
+                        state: parent,
+                        cursor,
+                        cursor_pos: frame.parent_cursor_pos,
+                        drill_stack,
+                        scroll_offset: frame.parent_scroll_offset,
+                    });
+                    return Some(ModalResult::Continue);
+                }
+                let Some(template) = self.template.as_mut() else {
+                    self.push_toast(ToastLevel::Warning, "No template open.");
+                    return Some(ModalResult::CloseCancel);
+                };
+                match crate::tui::cursor::apply_form(template, &cursor, &state) {
+                    Ok(()) => {
+                        let msg = format!("Saved {}.", state.form.title);
+                        self.push_toast(ToastLevel::Success, msg);
+                        return Some(ModalResult::CloseSuccess);
+                    }
+                    Err(e) => {
+                        self.push_toast(ToastLevel::Warning, format!("Save failed: {e}"));
+                        self.modal = Some(Modal::FormEdit {
+                            state,
+                            cursor,
+                            cursor_pos,
+                            drill_stack,
+                            scroll_offset: 0,
+                        });
+                        return Some(ModalResult::Continue);
+                    }
+                }
+            }
+            return Some(ModalResult::CloseCancel);
+        }
+
+        if matches!(key.code, KeyCode::Esc) {
+            let taken = self.modal.take();
+            if let Some(Modal::FormEdit {
+                cursor,
+                mut drill_stack,
+                ..
+            }) = taken
+            {
+                if let Some(frame) = drill_stack.pop() {
+                    self.push_toast(ToastLevel::Info, "Item edit cancelled.");
+                    self.modal = Some(Modal::FormEdit {
+                        state: frame.parent_state,
+                        cursor,
+                        cursor_pos: frame.parent_cursor_pos,
+                        drill_stack,
+                        scroll_offset: frame.parent_scroll_offset,
+                    });
+                    return Some(ModalResult::Continue);
+                }
+            }
+            self.modal = None;
+            return Some(ModalResult::CloseCancel);
+        }
+
+        let Some(Modal::FormEdit {
+            state,
+            cursor_pos,
+            scroll_offset,
+            ..
+        }) = self.modal.as_mut()
+        else {
+            return Some(ModalResult::CloseCancel);
+        };
+
+        let focused_idx = state.focused_field;
+        let (field_id, is_enum, is_textarea, is_subform, accepts_text) =
+            match state.form.fields.get(focused_idx) {
+                Some(f) => (
+                    f.id,
+                    matches!(f.kind, editform::FieldKind::Enum { .. }),
+                    matches!(f.kind, editform::FieldKind::Textarea { .. }),
+                    matches!(f.kind, editform::FieldKind::SubForm { .. }),
+                    matches!(
+                        f.kind,
+                        editform::FieldKind::Text { .. }
+                            | editform::FieldKind::Url { .. }
+                            | editform::FieldKind::Textarea { .. }
+                    ),
+                ),
+                None => return Some(ModalResult::CloseCancel),
+            };
+
+        if is_subform {
+            match key.code {
+                KeyCode::Char('A') => {
+                    if let Some(new_item) = state.new_sub_item(field_id) {
+                        let items = state.sub_state.entry(field_id.to_string()).or_default();
+                        let selected = state.selected_sub_item.get(field_id).copied().unwrap_or(0);
+                        let insert_at = if items.is_empty() {
+                            0
+                        } else {
+                            (selected + 1).min(items.len())
+                        };
+                        items.insert(insert_at, new_item);
+                        state
+                            .selected_sub_item
+                            .insert(field_id.to_string(), insert_at);
+                        self.push_toast(ToastLevel::Success, "Item added.");
+                    }
+                    return Some(ModalResult::Continue);
+                }
+                KeyCode::Char('X') => {
+                    let min_items = match state.form.fields[focused_idx].kind {
+                        editform::FieldKind::SubForm { min_items, .. } => min_items,
+                        _ => 0,
+                    };
+                    let items = state.sub_state.entry(field_id.to_string()).or_default();
+                    if items.len() > min_items {
+                        let selected = state.selected_sub_item.get(field_id).copied().unwrap_or(0);
+                        if selected < items.len() {
+                            items.remove(selected);
+                            let new_sel = selected.min(items.len().saturating_sub(1));
+                            state
+                                .selected_sub_item
+                                .insert(field_id.to_string(), new_sel);
+                            self.push_toast(ToastLevel::Info, "Item removed.");
+                        }
+                    } else {
+                        self.push_toast(
+                            ToastLevel::Warning,
+                            format!("Must keep at least {min_items} item(s)."),
+                        );
+                    }
+                    return Some(ModalResult::Continue);
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    let selected = state.selected_sub_item.get(field_id).copied().unwrap_or(0);
+                    let items_len = state.sub_state.get(field_id).map(|v| v.len()).unwrap_or(0);
+                    if items_len == 0 || selected == 0 {
+                        state.focus_prev();
+                        *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                        *cursor_pos = state
+                            .get(state.form.fields[state.focused_field].id)
+                            .chars()
+                            .count();
+                    } else {
+                        state
+                            .selected_sub_item
+                            .insert(field_id.to_string(), selected - 1);
+                    }
+                    return Some(ModalResult::Continue);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    let selected = state.selected_sub_item.get(field_id).copied().unwrap_or(0);
+                    let items_len = state.sub_state.get(field_id).map(|v| v.len()).unwrap_or(0);
+                    if selected + 1 < items_len {
+                        state
+                            .selected_sub_item
+                            .insert(field_id.to_string(), selected + 1);
+                    } else {
+                        state.focus_next();
+                        *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                        *cursor_pos = state
+                            .get(state.form.fields[state.focused_field].id)
+                            .chars()
+                            .count();
+                    }
+                    return Some(ModalResult::Continue);
+                }
+                KeyCode::Enter => {
+                    let taken = self.modal.take();
+                    if let Some(Modal::FormEdit {
+                        mut state,
+                        cursor,
+                        cursor_pos,
+                        mut drill_stack,
+                        scroll_offset,
+                    }) = taken
+                    {
+                        let selected = state.selected_sub_item.get(field_id).copied().unwrap_or(0);
+                        let items_len = state.sub_state.get(field_id).map(|v| v.len()).unwrap_or(0);
+                        if selected < items_len {
+                            let template = match &state.form.fields[focused_idx].kind {
+                                editform::FieldKind::SubForm { template, .. } => *template,
+                                _ => unreachable!("is_subform was true"),
+                            };
+                            let placeholder = editform::EditFormState::new(template);
+                            let items = state
+                                .sub_state
+                                .get_mut(field_id)
+                                .expect("sub_state present for SubForm field");
+                            let item_state = std::mem::replace(&mut items[selected], placeholder);
+                            let item_cursor_pos = item_state
+                                .get(item_state.form.fields[item_state.focused_field].id)
+                                .chars()
+                                .count();
+                            drill_stack.push(DrillFrame {
+                                parent_state: state,
+                                parent_cursor_pos: cursor_pos,
+                                parent_scroll_offset: scroll_offset,
+                                subform_field_id: field_id.to_string(),
+                                item_idx: selected,
+                            });
+                            self.modal = Some(Modal::FormEdit {
+                                state: item_state,
+                                cursor,
+                                cursor_pos: item_cursor_pos,
+                                drill_stack,
+                                scroll_offset: 0,
+                            });
+                            self.push_toast(
+                                ToastLevel::Info,
+                                "Editing item. Ctrl+S returns to parent.",
+                            );
+                        } else {
+                            self.modal = Some(Modal::FormEdit {
+                                state,
+                                cursor,
+                                cursor_pos,
+                                drill_stack,
+                                scroll_offset,
+                            });
+                        }
+                    }
+                    return Some(ModalResult::Continue);
+                }
+                _ => {}
+            }
+        }
+
+        match key.code {
+            KeyCode::Tab => {
+                state.focus_next();
+                *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                *cursor_pos = state
+                    .get(state.form.fields[state.focused_field].id)
+                    .chars()
+                    .count();
+            }
+            KeyCode::BackTab => {
+                state.focus_prev();
+                *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                *cursor_pos = state
+                    .get(state.form.fields[state.focused_field].id)
+                    .chars()
+                    .count();
+            }
+            KeyCode::Left => {
+                if is_enum {
+                    state.cycle_enum(false);
+                } else if *cursor_pos > 0 {
+                    *cursor_pos -= 1;
+                }
+            }
+            KeyCode::Right => {
+                if is_enum {
+                    state.cycle_enum(true);
+                } else {
+                    let len = state.get(field_id).chars().count();
+                    if *cursor_pos < len {
+                        *cursor_pos += 1;
+                    }
+                }
+            }
+            KeyCode::Up => {
+                if is_textarea {
+                    *cursor_pos =
+                        textarea_move_cursor_vertical(state.get(field_id), *cursor_pos, -1);
+                } else {
+                    state.focus_prev();
+                    *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                    *cursor_pos = state
+                        .get(state.form.fields[state.focused_field].id)
+                        .chars()
+                        .count();
+                }
+            }
+            KeyCode::Down => {
+                if is_textarea {
+                    *cursor_pos =
+                        textarea_move_cursor_vertical(state.get(field_id), *cursor_pos, 1);
+                } else {
+                    state.focus_next();
+                    *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                    *cursor_pos = state
+                        .get(state.form.fields[state.focused_field].id)
+                        .chars()
+                        .count();
+                }
+            }
+            KeyCode::PageUp if is_textarea => {
+                *cursor_pos = textarea_move_cursor_vertical(state.get(field_id), *cursor_pos, -10);
+            }
+            KeyCode::PageDown if is_textarea => {
+                *cursor_pos = textarea_move_cursor_vertical(state.get(field_id), *cursor_pos, 10);
+            }
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                if accepts_text {
+                    let current = state.get(field_id).to_string();
+                    let (new, pos) = insert_char(&current, *cursor_pos, c);
+                    state.set(field_id, new);
+                    *cursor_pos = pos;
+                }
+            }
+            KeyCode::Backspace => {
+                if accepts_text {
+                    let current = state.get(field_id).to_string();
+                    let (new, pos) = delete_char_before(&current, *cursor_pos);
+                    state.set(field_id, new);
+                    *cursor_pos = pos;
+                }
+            }
+            KeyCode::Enter => {
+                if is_textarea {
+                    let current = state.get(field_id).to_string();
+                    let (new, pos) = insert_char(&current, *cursor_pos, '\n');
+                    state.set(field_id, new);
+                    *cursor_pos = pos;
+                } else {
+                    state.focus_next();
+                    *scroll_offset = auto_scroll_for_focus(state, *scroll_offset);
+                    *cursor_pos = state
+                        .get(state.form.fields[state.focused_field].id)
+                        .chars()
+                        .count();
+                }
+            }
+            _ => {}
+        }
+
+        Some(ModalResult::Continue)
+    }
+
+    pub(in crate::tui) fn handle_form_edit_mouse(
+        &mut self,
+        m: event::MouseEvent,
+    ) -> Option<ModalResult> {
+        match m.kind {
+            MouseEventKind::ScrollUp => {
+                if let Some(Modal::FormEdit { scroll_offset, .. }) = self.modal.as_mut() {
+                    *scroll_offset = scroll_offset.saturating_sub(3);
+                }
+            }
+            MouseEventKind::ScrollDown => {
+                if let Some(Modal::FormEdit { scroll_offset, .. }) = self.modal.as_mut() {
+                    *scroll_offset = scroll_offset.saturating_add(3);
+                }
+            }
+            MouseEventKind::Down(MouseButton::Left) => {
+                let (x, y) = (m.column, m.row);
+                if let Some((_, idx)) = self
+                    .form_field_areas
+                    .borrow()
+                    .iter()
+                    .find(|(r, _)| contains_rect(*r, x, y))
+                    .copied()
+                {
+                    if let Some(Modal::FormEdit {
+                        state, cursor_pos, ..
+                    }) = self.modal.as_mut()
+                    {
+                        state.focused_field = idx;
+                        *cursor_pos = state.get(state.form.fields[idx].id).chars().count();
+                    }
+                }
+            }
+            _ => {}
+        }
+        Some(ModalResult::Continue)
+    }
+}
+
+fn contains_rect(area: Rect, x: u16, y: u16) -> bool {
+    x >= area.x
+        && x < area.x.saturating_add(area.width)
+        && y >= area.y
+        && y < area.y.saturating_add(area.height)
+}

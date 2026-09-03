@@ -4,6 +4,13 @@ impl App {
     pub(in crate::tui) fn handle_modal_event(&mut self, evt: Event) -> Option<ModalResult> {
         let _ = self.modal.as_ref()?;
 
+        if let Event::Mouse(m) = &evt {
+            if matches!(self.modal, Some(Modal::FormEdit { .. })) {
+                return self.handle_form_edit_mouse(*m);
+            }
+            return Some(ModalResult::Continue);
+        }
+
         if let Event::Key(key) = &evt {
             if key.code == KeyCode::F(1) {
                 self.show_help = true;
@@ -22,6 +29,7 @@ impl App {
                 Modal::ValidationErrors { .. } => self.handle_validation_errors_event(key),
                 Modal::MjmlMissing { .. } => self.handle_load_error_event(key),
                 Modal::MjmlCompileError { .. } => self.handle_compile_error_event(key),
+                Modal::FormEdit { .. } => self.handle_form_edit_event(key),
             };
         }
         Some(ModalResult::Continue)
@@ -50,8 +58,7 @@ impl App {
                 Some(ModalResult::CloseCancel)
             }
             KeyCode::Enter | KeyCode::Char('s')
-                if key.modifiers.contains(KeyModifiers::CONTROL)
-                    || key.code == KeyCode::Enter =>
+                if key.modifiers.contains(KeyModifiers::CONTROL) || key.code == KeyCode::Enter =>
             {
                 let raw = path.trim();
                 if raw.is_empty() {
@@ -187,12 +194,8 @@ impl App {
             );
             return;
         };
-        let root = self
-            .path
-            .as_ref()
-            .map(|p| crate::storage::template_root(p));
-        let report =
-            crate::validate::validate_template_with_root(template, root.as_deref());
+        let root = self.path.as_ref().map(|p| crate::storage::template_root(p));
+        let report = crate::validate::validate_template_with_root(template, root.as_deref());
         if !report.errors.is_empty() {
             self.modal = Some(Modal::ValidationErrors {
                 errors: report.errors,

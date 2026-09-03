@@ -295,13 +295,13 @@ fn tab_noop_when_details_hidden() {
 }
 
 #[test]
-fn enter_toasts_stub_edit() {
+fn enter_opens_formedit() {
     let mut app = app_with_template();
     send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Editing lands in the next slice")));
+    match &app.modal {
+        Some(Modal::FormEdit { state, .. }) => assert_eq!(state.form.title, "mj-head"),
+        other => panic!("expected FormEdit, got {other:?}"),
+    }
 }
 
 #[test]
@@ -380,4 +380,187 @@ fn draw_template_master_detail_does_not_panic() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal.draw(|f| app.draw(f)).expect("draw narrow");
     assert!(!app.details_visible);
+}
+
+fn app_with_one_column() -> App {
+    use crate::model::{BodyNode, MjColumn, MjSection, SectionChild};
+    let mut t = crate::model::Template::minimal();
+    t.body.nodes.push(BodyNode::MjSection(MjSection {
+        background_color: None,
+        padding: None,
+        full_width: false,
+        children: vec![SectionChild::MjColumn(MjColumn {
+            width: Some("100%".into()),
+            background_color: None,
+            padding: None,
+            inner_background_color: None,
+            components: Vec::new(),
+        })],
+    }));
+    App::new(
+        AppTheme::default(),
+        "default".to_string(),
+        None,
+        Some(t),
+        None,
+    )
+}
+
+fn form_state(app: &App) -> &super::editform::EditFormState {
+    match &app.modal {
+        Some(Modal::FormEdit { state, .. }) => state,
+        other => panic!("expected FormEdit, got {other:?}"),
+    }
+}
+
+fn form_state_mut(app: &mut App) -> &mut super::editform::EditFormState {
+    match &mut app.modal {
+        Some(Modal::FormEdit { state, .. }) => state,
+        other => panic!("expected FormEdit, got {other:?}"),
+    }
+}
+
+#[test]
+fn form_tab_moves_field() {
+    let mut app = app_with_template();
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    assert_eq!(form_state(&app).focused_field, 0);
+    send_key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    assert_eq!(form_state(&app).focused_field, 1);
+    send_key(&mut app, KeyCode::BackTab, KeyModifiers::SHIFT);
+    assert_eq!(form_state(&app).focused_field, 0);
+}
+
+#[test]
+fn form_enum_cycles_css_inline() {
+    let mut app = app_with_template();
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    let idx = form_state(&app)
+        .field_index("css_inline")
+        .expect("css_inline field");
+    form_state_mut(&mut app).focused_field = idx;
+    assert_eq!(form_state(&app).get("css_inline"), "false");
+    send_key(&mut app, KeyCode::Right, KeyModifiers::NONE);
+    assert_eq!(form_state(&app).get("css_inline"), "true");
+    send_key(&mut app, KeyCode::Left, KeyModifiers::NONE);
+    assert_eq!(form_state(&app).get("css_inline"), "false");
+}
+
+#[test]
+fn brand_edit_saves() {
+    let mut app = app_with_template();
+    app.selected_row = 1;
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    assert_eq!(form_state(&app).form.title, "brand");
+    form_state_mut(&mut app).set("font_family", "Raleway, Arial, sans-serif");
+    send_key(&mut app, KeyCode::Char('s'), KeyModifiers::CONTROL);
+    assert!(app.modal.is_none());
+    assert_eq!(
+        app.template.as_ref().unwrap().brand.font_family,
+        "Raleway, Arial, sans-serif"
+    );
+}
+
+#[test]
+fn add_google_font_row() {
+    let mut app = app_with_template();
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    let idx = form_state(&app).field_index("fonts").expect("fonts field");
+    form_state_mut(&mut app).focused_field = idx;
+    send_key(&mut app, KeyCode::Char('A'), KeyModifiers::SHIFT);
+    let fonts = form_state(&app)
+        .sub_state
+        .get("fonts")
+        .expect("fonts collection");
+    assert_eq!(fonts.len(), 1);
+    assert_eq!(fonts[0].get("name"), "Raleway");
+    assert!(fonts[0].get("href").contains("fonts.googleapis.com"));
+}
+
+#[test]
+fn json_ld_textarea_accepts_input() {
+    let mut app = app_with_template();
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    let idx = form_state(&app)
+        .field_index("json_ld")
+        .expect("json_ld field");
+    form_state_mut(&mut app).focused_field = idx;
+    if let Some(Modal::FormEdit { cursor_pos, .. }) = app.modal.as_mut() {
+        *cursor_pos = 0;
+    }
+    send_key(&mut app, KeyCode::Char('{'), KeyModifiers::NONE);
+    send_key(&mut app, KeyCode::Char('}'), KeyModifiers::NONE);
+    assert_eq!(form_state(&app).get("json_ld"), "{}");
+}
+
+#[test]
+fn delete_guards_head_brand_body() {
+    let mut app = app_with_template();
+    app.selected_row = 0;
+    send_key(&mut app, KeyCode::Char('d'), KeyModifiers::NONE);
+    app.selected_row = 1;
+    send_key(&mut app, KeyCode::Char('d'), KeyModifiers::NONE);
+    app.selected_row = 2;
+    send_key(&mut app, KeyCode::Char('d'), KeyModifiers::NONE);
+    let guarded = app
+        .toasts
+        .iter()
+        .filter(|t| t.message.contains("Cannot delete this row."))
+        .count();
+    assert_eq!(guarded, 3);
+    assert!(app.template.is_some());
+}
+
+#[test]
+fn c_splits_one_column_fifty_fifty() {
+    let mut app = app_with_one_column();
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-section"))
+        .expect("section row");
+    app.selected_row = idx;
+    send_key(&mut app, KeyCode::Char('C'), KeyModifiers::SHIFT);
+    let crate::model::BodyNode::MjSection(s) = &app.template.as_ref().unwrap().body.nodes[0] else {
+        panic!("expected mj-section");
+    };
+    assert_eq!(s.children.len(), 2);
+    let widths: Vec<_> = s
+        .children
+        .iter()
+        .map(|c| match c {
+            crate::model::SectionChild::MjColumn(col) => col.width.clone().unwrap(),
+            _ => panic!("expected column"),
+        })
+        .collect();
+    assert_eq!(widths, vec!["50%", "50%"]);
+}
+
+#[test]
+fn v_refuses_last_column() {
+    let mut app = app_with_one_column();
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-section"))
+        .expect("section row");
+    app.selected_row = idx;
+    send_key(&mut app, KeyCode::Char('V'), KeyModifiers::SHIFT);
+    assert!(app
+        .toasts
+        .iter()
+        .any(|t| t.message.contains("A section needs at least one column")));
+    let crate::model::BodyNode::MjSection(s) = &app.template.as_ref().unwrap().body.nodes[0] else {
+        panic!("expected mj-section");
+    };
+    assert_eq!(s.children.len(), 1);
+}
+
+#[test]
+fn draw_formedit_does_not_panic() {
+    let mut app = app_with_template();
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal.draw(|f| app.draw(f)).expect("draw form");
 }
