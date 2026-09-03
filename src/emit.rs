@@ -1,9 +1,10 @@
 //! Deterministic Template → self-contained MJML 5.
 use crate::model::{
     Align, BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
-    HeroMode, ImagePosition, MjButton, MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjSection,
-    MjSocial, MjSocialElement, MjSpacer, MjTable, MjText, MjWrapper, SectionChild, SocialMode,
-    SocialNetwork, Template,
+    HeroMode, ImagePosition, MjAccordion, MjAccordionElement, MjButton, MjCarousel,
+    MjCarouselImage, MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjNavbar, MjNavbarLink,
+    MjSection, MjSocial, MjSocialElement, MjSpacer, MjTable, MjText, MjWrapper, SectionChild,
+    SocialMode, SocialNetwork, Template, Thumbnails,
 };
 
 #[derive(Debug, Clone)]
@@ -20,7 +21,10 @@ pub fn emit_mjml(t: &Template, mode: EmitMode) -> anyhow::Result<String> {
     if !t.preheader.trim().is_empty() {
         w.leaf_text("mj-preview", &xml_escape_text(&t.preheader));
     }
-    w.self_close("mj-breakpoint", &[("width", xml_escape_attr(&t.head.breakpoint))]);
+    w.self_close(
+        "mj-breakpoint",
+        &[("width", xml_escape_attr(&t.head.breakpoint))],
+    );
     for font in &t.head.fonts {
         w.self_close(
             "mj-font",
@@ -64,7 +68,10 @@ pub fn emit_mjml(t: &Template, mode: EmitMode) -> anyhow::Result<String> {
         ],
     );
     if !t.preheader.trim().is_empty() {
-        w.open_attrs("mj-section", &[("css-class", "preheader".into()), ("padding", "0".into())]);
+        w.open_attrs(
+            "mj-section",
+            &[("css-class", "preheader".into()), ("padding", "0".into())],
+        );
         w.open("mj-column");
         w.leaf_text("mj-text", &xml_escape_text(&t.preheader));
         w.close("mj-column");
@@ -100,7 +107,10 @@ fn emit_attributes(w: &mut Writer, t: &Template) {
     w.self_close(
         "mj-button",
         &[
-            ("background-color", xml_escape_attr(&t.brand.button_background)),
+            (
+                "background-color",
+                xml_escape_attr(&t.brand.button_background),
+            ),
             ("color", xml_escape_attr(&t.brand.button_color)),
             ("border-radius", "4px".into()),
             ("inner-padding", "12px 24px".into()),
@@ -177,7 +187,11 @@ fn emit_section(
     s: &MjSection,
 ) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
-    push_opt(&mut attrs, "background-color", s.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        s.background_color.as_deref(),
+    );
     push_opt(&mut attrs, "padding", s.padding.as_deref());
     if s.full_width {
         attrs.push(("full-width", "full-width".into()));
@@ -200,7 +214,11 @@ fn emit_wrapper(
     s: &MjWrapper,
 ) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
-    push_opt(&mut attrs, "background-color", s.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        s.background_color.as_deref(),
+    );
     push_opt(&mut attrs, "padding", s.padding.as_deref());
     if s.full_width {
         attrs.push(("full-width", "full-width".into()));
@@ -216,7 +234,11 @@ fn emit_wrapper(
 fn emit_group(w: &mut Writer, t: &Template, mode: &EmitMode, g: &MjGroup) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_opt(&mut attrs, "width", g.width.as_deref());
-    push_opt(&mut attrs, "background-color", g.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        g.background_color.as_deref(),
+    );
     w.open_attrs("mj-group", &attrs);
     for col in &g.children {
         emit_column(w, t, mode, col)?;
@@ -225,15 +247,14 @@ fn emit_group(w: &mut Writer, t: &Template, mode: &EmitMode, g: &MjGroup) -> any
     Ok(())
 }
 
-fn emit_column(
-    w: &mut Writer,
-    t: &Template,
-    mode: &EmitMode,
-    c: &MjColumn,
-) -> anyhow::Result<()> {
+fn emit_column(w: &mut Writer, t: &Template, mode: &EmitMode, c: &MjColumn) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_opt(&mut attrs, "width", c.width.as_deref());
-    push_opt(&mut attrs, "background-color", c.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        c.background_color.as_deref(),
+    );
     push_opt(&mut attrs, "padding", c.padding.as_deref());
     push_opt(
         &mut attrs,
@@ -257,11 +278,27 @@ fn emit_hero(w: &mut Writer, t: &Template, mode: &EmitMode, h: &MjHero) -> anyho
         }
         .to_string(),
     )];
-    if let Some(url) = h.background_url.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-        attrs.push(("background-url", xml_escape_attr(&rewrite_src(url, t, mode)?)));
+    if let Some(url) = h
+        .background_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        attrs.push((
+            "background-url",
+            xml_escape_attr(&rewrite_src(url, t, mode)?),
+        ));
     }
-    push_opt(&mut attrs, "background-color", h.background_color.as_deref());
-    push_opt(&mut attrs, "background-height", h.background_height.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        h.background_color.as_deref(),
+    );
+    push_opt(
+        &mut attrs,
+        "background-height",
+        h.background_height.as_deref(),
+    );
     push_opt(&mut attrs, "width", h.width.as_deref());
     push_opt(&mut attrs, "height", h.height.as_deref());
     w.open_attrs("mj-hero", &attrs);
@@ -286,6 +323,9 @@ fn emit_column_child(
         ColumnChild::MjSpacer(n) => emit_spacer(w, n),
         ColumnChild::MjSocial(n) => emit_social(w, n),
         ColumnChild::MjTable(n) => emit_table(w, n),
+        ColumnChild::MjNavbar(n) => emit_navbar(w, n),
+        ColumnChild::MjAccordion(n) => emit_accordion(w, n),
+        ColumnChild::MjCarousel(n) => emit_carousel(w, t, mode, n),
     }
 }
 
@@ -304,7 +344,11 @@ fn emit_text(w: &mut Writer, n: &MjText) -> anyhow::Result<()> {
 
 fn emit_button(w: &mut Writer, n: &MjButton) -> anyhow::Result<()> {
     let mut attrs = vec![("href", xml_escape_attr(&n.href))];
-    push_opt(&mut attrs, "background-color", n.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        n.background_color.as_deref(),
+    );
     push_opt(&mut attrs, "color", n.color.as_deref());
     push_align(&mut attrs, n.align);
     push_opt(&mut attrs, "font-family", n.font_family.as_deref());
@@ -317,12 +361,7 @@ fn emit_button(w: &mut Writer, n: &MjButton) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn emit_image(
-    w: &mut Writer,
-    t: &Template,
-    mode: &EmitMode,
-    n: &MjImage,
-) -> anyhow::Result<()> {
+fn emit_image(w: &mut Writer, t: &Template, mode: &EmitMode, n: &MjImage) -> anyhow::Result<()> {
     let src = rewrite_src(&n.src, t, mode)?;
     let mut attrs = vec![
         ("src", xml_escape_attr(&src)),
@@ -399,6 +438,116 @@ fn social_network_mjml(n: SocialNetwork) -> &'static str {
     }
 }
 
+fn emit_navbar(w: &mut Writer, n: &MjNavbar) -> anyhow::Result<()> {
+    let mut attrs = Vec::new();
+    if n.hamburger {
+        attrs.push(("hamburger", "hamburger".into()));
+    }
+    push_opt(&mut attrs, "ico-color", n.ico_color.as_deref());
+    push_opt(&mut attrs, "base-url", n.base_url.as_deref());
+    push_align(&mut attrs, n.align);
+    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    w.open_attrs("mj-navbar", &attrs);
+    for link in &n.links {
+        emit_navbar_link(w, link);
+    }
+    w.close("mj-navbar");
+    Ok(())
+}
+
+fn emit_navbar_link(w: &mut Writer, n: &MjNavbarLink) {
+    let mut attrs = vec![("href", xml_escape_attr(&n.href))];
+    push_opt(&mut attrs, "color", n.color.as_deref());
+    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    w.open_attrs("mj-navbar-link", &attrs);
+    w.raw_indented(&xml_escape_text(&n.content));
+    w.close("mj-navbar-link");
+}
+
+fn emit_accordion(w: &mut Writer, n: &MjAccordion) -> anyhow::Result<()> {
+    let mut attrs = Vec::new();
+    push_opt(&mut attrs, "border", n.border.as_deref());
+    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    w.open_attrs("mj-accordion", &attrs);
+    for el in &n.elements {
+        emit_accordion_element(w, el);
+    }
+    w.close("mj-accordion");
+    Ok(())
+}
+
+fn emit_accordion_element(w: &mut Writer, n: &MjAccordionElement) {
+    let mut attrs = Vec::new();
+    push_opt(
+        &mut attrs,
+        "background-color",
+        n.background_color.as_deref(),
+    );
+    w.open_attrs("mj-accordion-element", &attrs);
+    w.open("mj-accordion-title");
+    w.raw_indented(&xml_escape_text(&n.title));
+    w.close("mj-accordion-title");
+    w.open("mj-accordion-text");
+    w.raw_indented(&emit_text_inner(&n.content));
+    w.close("mj-accordion-text");
+    w.close("mj-accordion-element");
+}
+
+fn emit_carousel(
+    w: &mut Writer,
+    t: &Template,
+    mode: &EmitMode,
+    n: &MjCarousel,
+) -> anyhow::Result<()> {
+    let mut attrs = Vec::new();
+    push_align(&mut attrs, n.align);
+    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    attrs.push((
+        "thumbnails",
+        match n.thumbnails {
+            Thumbnails::Visible => "visible",
+            Thumbnails::Hidden => "hidden",
+            Thumbnails::Supported => "supported",
+        }
+        .into(),
+    ));
+    w.open_attrs("mj-carousel", &attrs);
+    for img in &n.images {
+        emit_carousel_image(w, t, mode, img)?;
+    }
+    w.close("mj-carousel");
+    Ok(())
+}
+
+fn emit_carousel_image(
+    w: &mut Writer,
+    t: &Template,
+    mode: &EmitMode,
+    n: &MjCarouselImage,
+) -> anyhow::Result<()> {
+    let src = rewrite_src(&n.src, t, mode)?;
+    let mut attrs = vec![
+        ("src", xml_escape_attr(&src)),
+        ("alt", xml_escape_attr(&n.alt)),
+    ];
+    if let Some(href) = n.href.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        attrs.push(("href", xml_escape_attr(href)));
+    }
+    if let Some(thumb) = n
+        .thumbnails_src
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        attrs.push((
+            "thumbnails-src",
+            xml_escape_attr(&rewrite_src(thumb, t, mode)?),
+        ));
+    }
+    w.self_close("mj-carousel-image", &attrs);
+    Ok(())
+}
+
 fn emit_table(w: &mut Writer, n: &MjTable) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_opt(&mut attrs, "font-size", n.font_size.as_deref());
@@ -422,7 +571,11 @@ fn emit_email_header(
     h: &EmailHeader,
 ) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
-    push_opt(&mut attrs, "background-color", h.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        h.background_color.as_deref(),
+    );
     w.open_attrs("mj-section", &attrs);
     w.open("mj-column");
     if !h.logo_src.trim().is_empty() {
@@ -433,7 +586,12 @@ fn emit_email_header(
             ("width", xml_escape_attr(&h.logo_width)),
             ("align", "left".into()),
         ];
-        if let Some(href) = h.logo_href.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        if let Some(href) = h
+            .logo_href
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
             img.push(("href", xml_escape_attr(href)));
         }
         w.self_close("mj-image", &img);
@@ -450,7 +608,11 @@ fn emit_email_hero(
     h: &EmailHero,
 ) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
-    push_opt(&mut attrs, "background-color", h.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        h.background_color.as_deref(),
+    );
     w.open_attrs("mj-section", &attrs);
     w.open("mj-column");
     if !h.image_src.trim().is_empty() {
@@ -472,7 +634,10 @@ fn emit_email_hero(
         w.close("mj-text");
     }
     if !h.subheading.trim().is_empty() {
-        w.open_attrs("mj-text", &[("color", xml_escape_attr(&t.brand.text_color))]);
+        w.open_attrs(
+            "mj-text",
+            &[("color", xml_escape_attr(&t.brand.text_color))],
+        );
         w.raw_indented(&xml_escape_text(&h.subheading));
         w.close("mj-text");
     }
@@ -488,7 +653,11 @@ fn emit_email_cta(
     c: &EmailCta,
 ) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
-    push_opt(&mut attrs, "background-color", c.background_color.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-color",
+        c.background_color.as_deref(),
+    );
     w.open_attrs("mj-section", &attrs);
     w.open("mj-column");
     if !c.heading.trim().is_empty() {
@@ -626,7 +795,12 @@ fn emit_email_footer(
             xml_escape_text(label)
         ));
     }
-    if let Some(copy) = f.copyright.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+    if let Some(copy) = f
+        .copyright
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
         lines.push(xml_escape_text(copy));
     }
     if !lines.is_empty() {
@@ -945,9 +1119,8 @@ mod tests {
     use super::*;
     use crate::model::{
         BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
-        HeroMode, ImagePosition, MjColumn, MjGroup, MjHero, MjSection, MjSocial,
-        MjSocialElement, MjTable, MjText, MjWrapper, SectionChild, SocialNetwork, Template,
-        WebFont,
+        HeroMode, ImagePosition, MjColumn, MjGroup, MjHero, MjSection, MjSocial, MjSocialElement,
+        MjTable, MjText, MjWrapper, SectionChild, SocialNetwork, Template, WebFont,
     };
 
     fn export(t: &Template) -> String {
@@ -1125,6 +1298,16 @@ mod tests {
             "<mj-divider",
             "<mj-spacer",
             "<mj-table",
+            "<mj-navbar",
+            "hamburger=\"hamburger\"",
+            "<mj-navbar-link",
+            "<mj-accordion",
+            "<mj-accordion-element",
+            "<mj-accordion-title",
+            "<mj-accordion-text",
+            "<mj-carousel",
+            "thumbnails=\"hidden\"",
+            "<mj-carousel-image",
             "font-size=\"28px\"",
             "Unsubscribe",
             "name=\"twitter\"",
@@ -1133,6 +1316,36 @@ mod tests {
         }
         assert!(!a.contains("mj-include"));
         assert_eq!(a.matches("<mj-raw>").count(), 1);
+        assert!(a.contains("thumbnails-src=\"https://cdn.example.com/thumb.png\""));
+        assert!(!a.contains("hamburger=\"true\""));
+    }
+
+    #[test]
+    fn hamburger_false_omits_attr() {
+        let mut t = Template::minimal();
+        t.preheader.clear();
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            background_color: None,
+            padding: None,
+            full_width: false,
+            children: vec![SectionChild::MjColumn(MjColumn {
+                width: None,
+                background_color: None,
+                padding: None,
+                inner_background_color: None,
+                components: vec![ColumnChild::MjNavbar(crate::model::MjNavbar {
+                    hamburger: false,
+                    ico_color: None,
+                    base_url: None,
+                    align: None,
+                    padding: None,
+                    links: vec![],
+                })],
+            })],
+        }));
+        let mjml = export(&t);
+        assert!(mjml.contains("<mj-navbar"));
+        assert!(!mjml.contains("hamburger="));
     }
 
     fn kitchen_sink() -> Template {
@@ -1204,6 +1417,41 @@ mod tests {
                                     font_size: None,
                                     color: None,
                                     padding: None,
+                                }),
+                                ColumnChild::MjNavbar(crate::model::MjNavbar {
+                                    hamburger: true,
+                                    ico_color: Some("#ffffff".into()),
+                                    base_url: None,
+                                    align: None,
+                                    padding: None,
+                                    links: vec![crate::model::MjNavbarLink {
+                                        href: "https://example.com".into(),
+                                        content: "Home".into(),
+                                        color: None,
+                                        padding: None,
+                                    }],
+                                }),
+                                ColumnChild::MjAccordion(crate::model::MjAccordion {
+                                    border: None,
+                                    padding: None,
+                                    elements: vec![crate::model::MjAccordionElement {
+                                        title: "Why?".into(),
+                                        content: "Because.".into(),
+                                        background_color: None,
+                                    }],
+                                }),
+                                ColumnChild::MjCarousel(crate::model::MjCarousel {
+                                    align: None,
+                                    padding: None,
+                                    thumbnails: crate::model::Thumbnails::Hidden,
+                                    images: vec![crate::model::MjCarouselImage {
+                                        src: "https://cdn.example.com/slide.png".into(),
+                                        alt: "Slide".into(),
+                                        href: None,
+                                        thumbnails_src: Some(
+                                            "https://cdn.example.com/thumb.png".into(),
+                                        ),
+                                    }],
                                 }),
                             ],
                         }],

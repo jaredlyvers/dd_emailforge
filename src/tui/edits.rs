@@ -322,7 +322,12 @@ fn enclosing_columns(template: Option<&Template>, id: &TreeId) -> Option<ColOwne
                     }
                 }
             }
-            Step::ColComp(_) | Step::HeroChild(_) | Step::BodyNode(_) => {}
+            Step::ColComp(_)
+            | Step::HeroChild(_)
+            | Step::BodyNode(_)
+            | Step::NavbarLink(_)
+            | Step::AccordionEl(_)
+            | Step::CarouselImg(_) => {}
         }
     }
     owner
@@ -532,6 +537,11 @@ fn remove_from_body_node(n: &mut BodyNode, rest: &[Step]) -> bool {
                 false
             }
         }
+        (BodyNode::MjHero(h), [Step::HeroChild(j), tail @ ..]) => h
+            .children
+            .get_mut(*j)
+            .map(|c| remove_from_column_child(c, tail))
+            .unwrap_or(false),
         _ => false,
     }
 }
@@ -540,6 +550,33 @@ fn remove_from_column(c: &mut MjColumn, rest: &[Step]) -> bool {
     match rest {
         [Step::ColComp(i)] if *i < c.components.len() => {
             c.components.remove(*i);
+            true
+        }
+        [Step::ColComp(i), tail @ ..] => c
+            .components
+            .get_mut(*i)
+            .map(|ch| remove_from_column_child(ch, tail))
+            .unwrap_or(false),
+        _ => false,
+    }
+}
+
+fn remove_from_column_child(c: &mut crate::model::ColumnChild, rest: &[Step]) -> bool {
+    match (c, rest) {
+        (crate::model::ColumnChild::MjNavbar(n), [Step::NavbarLink(i)]) if *i < n.links.len() => {
+            n.links.remove(*i);
+            true
+        }
+        (crate::model::ColumnChild::MjAccordion(a), [Step::AccordionEl(i)])
+            if *i < a.elements.len() =>
+        {
+            a.elements.remove(*i);
+            true
+        }
+        (crate::model::ColumnChild::MjCarousel(car), [Step::CarouselImg(i)])
+            if *i < car.images.len() =>
+        {
+            car.images.remove(*i);
             true
         }
         _ => false,
@@ -631,6 +668,13 @@ fn duplicate_in_body_node(n: &mut BodyNode, rest: &[Step]) -> Option<Vec<Step>> 
             h.children.insert(*j + 1, clone);
             Some(vec![Step::HeroChild(*j + 1)])
         }
+        (BodyNode::MjHero(h), [Step::HeroChild(j), tail @ ..]) => {
+            let child = h.children.get_mut(*j)?;
+            let mut rest = duplicate_in_column_child(child, tail)?;
+            let mut out = vec![Step::HeroChild(*j)];
+            out.append(&mut rest);
+            Some(out)
+        }
         _ => None,
     }
 }
@@ -641,6 +685,41 @@ fn duplicate_in_column(c: &mut MjColumn, rest: &[Step]) -> Option<Vec<Step>> {
             let clone = c.components[*i].clone();
             c.components.insert(*i + 1, clone);
             Some(vec![Step::ColComp(*i + 1)])
+        }
+        [Step::ColComp(i), tail @ ..] => {
+            let child = c.components.get_mut(*i)?;
+            let mut rest = duplicate_in_column_child(child, tail)?;
+            let mut out = vec![Step::ColComp(*i)];
+            out.append(&mut rest);
+            Some(out)
+        }
+        _ => None,
+    }
+}
+
+fn duplicate_in_column_child(
+    c: &mut crate::model::ColumnChild,
+    rest: &[Step],
+) -> Option<Vec<Step>> {
+    match (c, rest) {
+        (crate::model::ColumnChild::MjNavbar(n), [Step::NavbarLink(i)]) if *i < n.links.len() => {
+            let clone = n.links[*i].clone();
+            n.links.insert(*i + 1, clone);
+            Some(vec![Step::NavbarLink(*i + 1)])
+        }
+        (crate::model::ColumnChild::MjAccordion(a), [Step::AccordionEl(i)])
+            if *i < a.elements.len() =>
+        {
+            let clone = a.elements[*i].clone();
+            a.elements.insert(*i + 1, clone);
+            Some(vec![Step::AccordionEl(*i + 1)])
+        }
+        (crate::model::ColumnChild::MjCarousel(car), [Step::CarouselImg(i)])
+            if *i < car.images.len() =>
+        {
+            let clone = car.images[*i].clone();
+            car.images.insert(*i + 1, clone);
+            Some(vec![Step::CarouselImg(*i + 1)])
         }
         _ => None,
     }
@@ -725,6 +804,13 @@ fn reorder_in_body_node(
                 }
             }
         }
+        (BodyNode::MjHero(h), [Step::HeroChild(j)]) => {
+            let child = h.children.get_mut(*j)?;
+            let mut rest = reorder_in_column_child(child, last, delta)?;
+            let mut out = vec![Step::HeroChild(*j)];
+            out.append(&mut rest);
+            Some(out)
+        }
         _ => None,
     }
 }
@@ -735,12 +821,40 @@ fn reorder_in_column(
     last: &Step,
     delta: isize,
 ) -> Option<Vec<Step>> {
-    if !parent_rest.is_empty() {
-        return None;
+    if parent_rest.is_empty() {
+        return match last {
+            Step::ColComp(i) => {
+                swap_index(&mut c.components, *i, delta).map(|ni| vec![Step::ColComp(ni)])
+            }
+            _ => None,
+        };
     }
-    match last {
-        Step::ColComp(i) => {
-            swap_index(&mut c.components, *i, delta).map(|ni| vec![Step::ColComp(ni)])
+    match parent_rest {
+        [Step::ColComp(i)] => {
+            let child = c.components.get_mut(*i)?;
+            let mut rest = reorder_in_column_child(child, last, delta)?;
+            let mut out = vec![Step::ColComp(*i)];
+            out.append(&mut rest);
+            Some(out)
+        }
+        _ => None,
+    }
+}
+
+fn reorder_in_column_child(
+    c: &mut crate::model::ColumnChild,
+    last: &Step,
+    delta: isize,
+) -> Option<Vec<Step>> {
+    match (c, last) {
+        (crate::model::ColumnChild::MjNavbar(n), Step::NavbarLink(i)) => {
+            swap_index(&mut n.links, *i, delta).map(|ni| vec![Step::NavbarLink(ni)])
+        }
+        (crate::model::ColumnChild::MjAccordion(a), Step::AccordionEl(i)) => {
+            swap_index(&mut a.elements, *i, delta).map(|ni| vec![Step::AccordionEl(ni)])
+        }
+        (crate::model::ColumnChild::MjCarousel(car), Step::CarouselImg(i)) => {
+            swap_index(&mut car.images, *i, delta).map(|ni| vec![Step::CarouselImg(ni)])
         }
         _ => None,
     }
@@ -761,9 +875,9 @@ fn reorder_in_group(
         };
     }
     match parent_rest {
-        [Step::GroupCol(i)] => {
+        [Step::GroupCol(i), tail @ ..] => {
             let c = g.children.get_mut(*i)?;
-            let mut rest = reorder_in_column(c, &[], last, delta)?;
+            let mut rest = reorder_in_column(c, tail, last, delta)?;
             let mut out = vec![Step::GroupCol(*i)];
             out.append(&mut rest);
             Some(out)

@@ -645,6 +645,78 @@ fn insert_illegal_on_head_toasts() {
 }
 
 #[test]
+fn insert_navbar_on_column_and_link_under_navbar() {
+    let mut app = app_with_one_column();
+    let col = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-column"))
+        .expect("column row");
+    app.selected_row = col;
+    app.insert_kind(super::component_kind::ComponentKind::MjNavbar);
+    let crate::model::BodyNode::MjSection(s) = &app.template.as_ref().unwrap().body.nodes[0] else {
+        panic!("expected section");
+    };
+    let crate::model::SectionChild::MjColumn(c) = &s.children[0] else {
+        panic!("expected column");
+    };
+    assert!(matches!(
+        c.components[0],
+        crate::model::ColumnChild::MjNavbar(_)
+    ));
+    let nav = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label == "mj-navbar")
+        .expect("navbar row");
+    app.selected_row = nav;
+    app.insert_kind(super::component_kind::ComponentKind::MjNavbarLink);
+    let crate::model::BodyNode::MjSection(s) = &app.template.as_ref().unwrap().body.nodes[0] else {
+        panic!("expected section");
+    };
+    let crate::model::SectionChild::MjColumn(c) = &s.children[0] else {
+        panic!("expected column");
+    };
+    let crate::model::ColumnChild::MjNavbar(n) = &c.components[0] else {
+        panic!("expected navbar");
+    };
+    assert_eq!(n.links.len(), 1);
+    assert!(app.tree_rows().iter().any(|r| r.label == "mj-navbar-link"));
+}
+
+#[test]
+fn insert_navbar_link_on_column_toasts() {
+    let mut app = app_with_one_column();
+    let col = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-column"))
+        .expect("column row");
+    app.selected_row = col;
+    app.insert_kind(super::component_kind::ComponentKind::MjNavbarLink);
+    assert!(app
+        .toasts
+        .iter()
+        .any(|t| t.message.contains("Cannot insert mj-navbar-link here")));
+}
+
+#[test]
+fn insert_navbar_link_on_section_toasts() {
+    let mut app = app_with_one_column();
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-section"))
+        .expect("section row");
+    app.selected_row = idx;
+    app.insert_kind(super::component_kind::ComponentKind::MjNavbarLink);
+    assert!(app
+        .toasts
+        .iter()
+        .any(|t| t.message.contains("Cannot insert mj-navbar-link here")));
+}
+
+#[test]
 fn image_picker_writes_relative_path() {
     let dir = std::env::temp_dir().join(format!("dd_emailforge_5c_img_{}", std::process::id()));
     let images = dir.join("images");

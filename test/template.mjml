@@ -1,0 +1,79 @@
+<mjml lang="en">
+  <mj-head>
+    <mj-title>You're in.</mj-title>
+    <mj-preview>Here's what happens next.</mj-preview>
+    <mj-breakpoint width="480px" />
+    <mj-font name="Raleway" href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&amp;display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Raleway, Arial, Helvetica, sans-serif" />
+      <mj-text color="#1a1a1a" font-size="16px" line-height="1.5" />
+      <mj-button background-color="#FFAF46" color="#0F1114" border-radius="4px" inner-padding="12px 24px" font-weight="bold" />
+      <mj-body background-color="#f4f4f4" width="600px" />
+      <mj-section padding="20px 0" />
+      <mj-image padding="0" />
+    </mj-attributes>
+    <mj-style>
+      .preheader { display:none !important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f4f4f4" width="600px">
+    <mj-section css-class="preheader" padding="0">
+      <mj-column>
+        <mj-text>Here's what happens next.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column>
+        <mj-image src="https://dummyimage.com/320x80/0F1114/FFAF46" alt="Logo" width="160px" align="left" href="https://example.com" />
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column width="100%">
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff">
+      <mj-column>
+        <mj-image src="https://dummyimage.com/600x240/0F1114/FFAF46" alt="You're in." />
+        <mj-text font-size="28px" font-weight="bold">
+          You're in.
+        </mj-text>
+        <mj-text color="#1a1a1a">
+          Thanks for joining us.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column width="50%">
+        <mj-text>
+          What you get: a weekly note, no spam.
+        </mj-text>
+      </mj-column>
+      <mj-column width="50%">
+        <mj-text>
+          What we need: nothing else. You're set.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="22px" font-weight="bold">
+          Start here
+        </mj-text>
+        <mj-text>
+          Open the app and pick a template.
+        </mj-text>
+        <mj-button href="https://example.com">
+          Open the app
+        </mj-button>
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column>
+        <mj-divider />
+        <mj-text font-size="12px" align="center" color="#1a1a1a">
+          Example Co<br />123 Main St<br />Springfield, IL 62701<br /><a href="*|UNSUB|*">Unsubscribe</a><br />© Example Co
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

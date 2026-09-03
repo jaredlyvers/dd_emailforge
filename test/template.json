@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "name": "test",
+  "subject": "You're in.",
+  "preheader": "Here's what happens next.",
+  "lang": "en",
+  "base_url": "",
+  "brand": {
+    "font_family": "Raleway, Arial, Helvetica, sans-serif",
+    "text_color": "#1a1a1a",
+    "background_color": "#f4f4f4",
+    "content_width": 600,
+    "button_background": "#FFAF46",
+    "button_color": "#0F1114"
+  },
+  "head": {
+    "title": "You're in.",
+    "breakpoint": "480px",
+    "fonts": [
+      {
+        "name": "Raleway",
+        "href": "https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap"
+      }
+    ],
+    "json_ld": "",
+    "css": "",
+    "css_inline": true
+  },
+  "body": {
+    "background_color": "",
+    "nodes": [
+      {
+        "type": "email-header",
+        "logo_src": "https://dummyimage.com/320x80/0F1114/FFAF46",
+        "logo_alt": "Logo",
+        "logo_href": "https://example.com",
+        "logo_width": "160px"
+      },
+      {
+        "type": "mj-section",
+        "full_width": false,
+        "children": [
+          {
+            "type": "mj-column",
+            "width": "100%",
+            "components": []
+          }
+        ]
+      },
+      {
+        "type": "email-hero",
+        "image_src": "https://dummyimage.com/600x240/0F1114/FFAF46",
+        "image_alt": "You're in.",
+        "heading": "You're in.",
+        "subheading": "Thanks for joining us.",
+        "background_color": "#ffffff"
+      },
+      {
+        "type": "mj-section",
+        "full_width": false,
+        "children": [
+          {
+            "type": "mj-column",
+            "width": "50%",
+            "components": [
+              {
+                "type": "mj-text",
+                "content": "What you get: a weekly note, no spam."
+              }
+            ]
+          },
+          {
+            "type": "mj-column",
+            "width": "50%",
+            "components": [
+              {
+                "type": "mj-text",
+                "content": "What we need: nothing else. You're set."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "email-cta",
+        "heading": "Start here",
+        "copy": "Open the app and pick a template.",
+        "button_label": "Open the app",
+        "button_href": "https://example.com"
+      },
+      {
+        "type": "email-footer",
+        "company_name": "Example Co",
+        "address_lines": [
+          "123 Main St",
+          "Springfield, IL 62701"
+        ],
+        "unsubscribe_label": "Unsubscribe",
+        "unsubscribe_href": "*|UNSUB|*",
+        "social": [],
+        "copyright": "© Example Co"
+      }
+    ]
+  }
+}

@@ -158,7 +158,7 @@ fn locate<'a>(t: &'a Template, path: &[Step]) -> Located<'a> {
                     return Located::Missing;
                 };
                 return match h.children.get(*j) {
-                    Some(c) => Located::Leaf(column_child_detail(c), vec![]),
+                    Some(c) => locate_nested_child(c, steps),
                     None => Located::Missing,
                 };
             }
@@ -185,8 +185,53 @@ fn locate_column<'a>(c: &'a MjColumn, mut steps: std::slice::Iter<'_, Step>) -> 
     match steps.next() {
         None => Located::Column(c),
         Some(Step::ColComp(i)) => match c.components.get(*i) {
-            Some(ch) => Located::Leaf(column_child_detail(ch), vec![]),
+            Some(ch) => locate_nested_child(ch, steps),
             None => Located::Missing,
+        },
+        _ => Located::Missing,
+    }
+}
+
+fn locate_nested_child<'a>(
+    ch: &'a ColumnChild,
+    mut steps: std::slice::Iter<'_, Step>,
+) -> Located<'a> {
+    match steps.next() {
+        None => {
+            let extra = match ch {
+                ColumnChild::MjNavbar(n) => vec![format!("links: {}", n.links.len())],
+                ColumnChild::MjAccordion(a) => vec![format!("elements: {}", a.elements.len())],
+                ColumnChild::MjCarousel(c) => vec![format!("images: {}", c.images.len())],
+                _ => vec![],
+            };
+            Located::Leaf(column_child_detail(ch), extra)
+        }
+        Some(Step::NavbarLink(i)) => match ch {
+            ColumnChild::MjNavbar(n) => match n.links.get(*i) {
+                Some(l) => Located::Leaf(
+                    format!("mj-navbar-link  {} → {}", l.content, l.href),
+                    vec![],
+                ),
+                None => Located::Missing,
+            },
+            _ => Located::Missing,
+        },
+        Some(Step::AccordionEl(i)) => match ch {
+            ColumnChild::MjAccordion(a) => match a.elements.get(*i) {
+                Some(el) => Located::Leaf(
+                    format!("mj-accordion-element  {}", truncate(&el.title, 40)),
+                    vec![],
+                ),
+                None => Located::Missing,
+            },
+            _ => Located::Missing,
+        },
+        Some(Step::CarouselImg(i)) => match ch {
+            ColumnChild::MjCarousel(c) => match c.images.get(*i) {
+                Some(img) => Located::Leaf(format!("mj-carousel-image  {}", img.src), vec![]),
+                None => Located::Missing,
+            },
+            _ => Located::Missing,
         },
         _ => Located::Missing,
     }
@@ -309,6 +354,9 @@ fn column_child_detail(c: &ColumnChild) -> String {
         ColumnChild::MjSpacer(s) => format!("mj-spacer  {}", s.height),
         ColumnChild::MjSocial(s) => format!("mj-social  {} icons", s.elements.len()),
         ColumnChild::MjTable(_) => "mj-table".into(),
+        ColumnChild::MjNavbar(n) => format!("mj-navbar  {} links", n.links.len()),
+        ColumnChild::MjAccordion(a) => format!("mj-accordion  {} items", a.elements.len()),
+        ColumnChild::MjCarousel(c) => format!("mj-carousel  {} images", c.images.len()),
     }
 }
 

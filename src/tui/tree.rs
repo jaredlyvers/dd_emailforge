@@ -4,7 +4,8 @@ use std::collections::HashSet;
 use super::toasts::ToastLevel;
 use super::App;
 use crate::model::{
-    BodyNode, ColumnChild, MjColumn, MjGroup, MjHero, MjSection, SectionChild, Template,
+    BodyNode, ColumnChild, MjAccordion, MjCarousel, MjColumn, MjGroup, MjHero, MjNavbar, MjSection,
+    SectionChild, Template,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -23,6 +24,9 @@ pub enum Step {
     GroupCol(usize),
     ColComp(usize),
     HeroChild(usize),
+    NavbarLink(usize),
+    AccordionEl(usize),
+    CarouselImg(usize),
 }
 
 #[derive(Clone, Debug)]
@@ -283,13 +287,7 @@ fn push_column(
         for (i, comp) in c.components.iter().enumerate() {
             let mut p = path.clone();
             p.push(Step::ColComp(i));
-            rows.push(row(
-                TreeId::Path(p),
-                column_child_label(comp),
-                &next,
-                i + 1 == n,
-                false,
-            ));
+            push_column_child(rows, comp, p, &next, i + 1 == n, collapsed);
         }
     }
 }
@@ -299,19 +297,147 @@ fn push_hero_children(
     h: &MjHero,
     path: &[Step],
     ancestors_last: &[bool],
-    _collapsed: &HashSet<TreeId>,
+    collapsed: &HashSet<TreeId>,
 ) {
     let n = h.children.len();
     for (i, comp) in h.children.iter().enumerate() {
         let mut p = path.to_vec();
         p.push(Step::HeroChild(i));
-        rows.push(row(
-            TreeId::Path(p),
-            column_child_label(comp),
+        push_column_child(rows, comp, p, ancestors_last, i + 1 == n, collapsed);
+    }
+}
+
+fn push_column_child(
+    rows: &mut Vec<TreeRow>,
+    c: &ColumnChild,
+    path: Vec<Step>,
+    ancestors_last: &[bool],
+    is_last: bool,
+    collapsed: &HashSet<TreeId>,
+) {
+    match c {
+        ColumnChild::MjNavbar(n) => push_navbar(rows, n, path, ancestors_last, is_last, collapsed),
+        ColumnChild::MjAccordion(a) => {
+            push_accordion(rows, a, path, ancestors_last, is_last, collapsed)
+        }
+        ColumnChild::MjCarousel(car) => {
+            push_carousel(rows, car, path, ancestors_last, is_last, collapsed)
+        }
+        other => rows.push(row(
+            TreeId::Path(path),
+            column_child_label(other),
             ancestors_last,
-            i + 1 == n,
+            is_last,
             false,
-        ));
+        )),
+    }
+}
+
+fn push_navbar(
+    rows: &mut Vec<TreeRow>,
+    n: &MjNavbar,
+    path: Vec<Step>,
+    ancestors_last: &[bool],
+    is_last: bool,
+    collapsed: &HashSet<TreeId>,
+) {
+    let id = TreeId::Path(path.clone());
+    let expandable = !n.links.is_empty();
+    let expanded = expandable && !collapsed.contains(&id);
+    rows.push(row(
+        id,
+        "mj-navbar".into(),
+        ancestors_last,
+        is_last,
+        expandable,
+    ));
+    if expanded {
+        let mut next = ancestors_last.to_vec();
+        next.push(is_last);
+        let count = n.links.len();
+        for (i, _) in n.links.iter().enumerate() {
+            let mut p = path.clone();
+            p.push(Step::NavbarLink(i));
+            rows.push(row(
+                TreeId::Path(p),
+                "mj-navbar-link".into(),
+                &next,
+                i + 1 == count,
+                false,
+            ));
+        }
+    }
+}
+
+fn push_accordion(
+    rows: &mut Vec<TreeRow>,
+    a: &MjAccordion,
+    path: Vec<Step>,
+    ancestors_last: &[bool],
+    is_last: bool,
+    collapsed: &HashSet<TreeId>,
+) {
+    let id = TreeId::Path(path.clone());
+    let expandable = !a.elements.is_empty();
+    let expanded = expandable && !collapsed.contains(&id);
+    rows.push(row(
+        id,
+        "mj-accordion".into(),
+        ancestors_last,
+        is_last,
+        expandable,
+    ));
+    if expanded {
+        let mut next = ancestors_last.to_vec();
+        next.push(is_last);
+        let count = a.elements.len();
+        for (i, _) in a.elements.iter().enumerate() {
+            let mut p = path.clone();
+            p.push(Step::AccordionEl(i));
+            rows.push(row(
+                TreeId::Path(p),
+                "mj-accordion-element".into(),
+                &next,
+                i + 1 == count,
+                false,
+            ));
+        }
+    }
+}
+
+fn push_carousel(
+    rows: &mut Vec<TreeRow>,
+    c: &MjCarousel,
+    path: Vec<Step>,
+    ancestors_last: &[bool],
+    is_last: bool,
+    collapsed: &HashSet<TreeId>,
+) {
+    let id = TreeId::Path(path.clone());
+    let expandable = !c.images.is_empty();
+    let expanded = expandable && !collapsed.contains(&id);
+    rows.push(row(
+        id,
+        "mj-carousel".into(),
+        ancestors_last,
+        is_last,
+        expandable,
+    ));
+    if expanded {
+        let mut next = ancestors_last.to_vec();
+        next.push(is_last);
+        let count = c.images.len();
+        for (i, _) in c.images.iter().enumerate() {
+            let mut p = path.clone();
+            p.push(Step::CarouselImg(i));
+            rows.push(row(
+                TreeId::Path(p),
+                "mj-carousel-image".into(),
+                &next,
+                i + 1 == count,
+                false,
+            ));
+        }
     }
 }
 
@@ -324,6 +450,9 @@ fn column_child_label(c: &ColumnChild) -> String {
         ColumnChild::MjSpacer(_) => "mj-spacer".into(),
         ColumnChild::MjSocial(_) => "mj-social".into(),
         ColumnChild::MjTable(_) => "mj-table".into(),
+        ColumnChild::MjNavbar(_) => "mj-navbar".into(),
+        ColumnChild::MjAccordion(_) => "mj-accordion".into(),
+        ColumnChild::MjCarousel(_) => "mj-carousel".into(),
     }
 }
 

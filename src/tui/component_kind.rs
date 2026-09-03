@@ -1,8 +1,10 @@
 //! Insert-picker kinds and the legal-target table from the design doc.
 use crate::model::{
     Align, BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
-    HeroMode, ImagePosition, MjButton, MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjSection,
-    MjSocial, MjSpacer, MjTable, MjText, MjWrapper, SectionChild, SocialMode, Template,
+    HeroMode, ImagePosition, MjAccordion, MjAccordionElement, MjButton, MjCarousel,
+    MjCarouselImage, MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjNavbar, MjNavbarLink,
+    MjSection, MjSocial, MjSpacer, MjTable, MjText, MjWrapper, SectionChild, SocialMode, Template,
+    Thumbnails,
 };
 
 use super::tree::{Step, TreeId};
@@ -26,6 +28,12 @@ pub(super) enum ComponentKind {
     MjSpacer,
     MjSocial,
     MjTable,
+    MjNavbar,
+    MjNavbarLink,
+    MjAccordion,
+    MjAccordionElement,
+    MjCarousel,
+    MjCarouselImage,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,6 +62,12 @@ impl ComponentKind {
             Self::MjSpacer,
             Self::MjSocial,
             Self::MjTable,
+            Self::MjNavbar,
+            Self::MjNavbarLink,
+            Self::MjAccordion,
+            Self::MjAccordionElement,
+            Self::MjCarousel,
+            Self::MjCarouselImage,
         ]
     }
 
@@ -76,6 +90,12 @@ impl ComponentKind {
             Self::MjSpacer => "mj-spacer",
             Self::MjSocial => "mj-social",
             Self::MjTable => "mj-table",
+            Self::MjNavbar => "mj-navbar",
+            Self::MjNavbarLink => "mj-navbar-link",
+            Self::MjAccordion => "mj-accordion",
+            Self::MjAccordionElement => "mj-accordion-element",
+            Self::MjCarousel => "mj-carousel",
+            Self::MjCarouselImage => "mj-carousel-image",
         }
     }
 
@@ -108,6 +128,16 @@ impl ComponentKind {
                 | Self::MjSpacer
                 | Self::MjSocial
                 | Self::MjTable
+                | Self::MjNavbar
+                | Self::MjAccordion
+                | Self::MjCarousel
+        )
+    }
+
+    pub(super) fn is_nested(self) -> bool {
+        matches!(
+            self,
+            Self::MjNavbarLink | Self::MjAccordionElement | Self::MjCarouselImage
         )
     }
 
@@ -118,7 +148,9 @@ impl ComponentKind {
                 self.is_block() || self.is_layout() || self.is_leaf()
             }
             SelectionClass::Section { in_wrapper } => {
-                if self.is_block() || self == Self::MjWrapper {
+                if self.is_nested() {
+                    false
+                } else if self.is_block() || self == Self::MjWrapper {
                     !in_wrapper
                 } else {
                     self.is_layout()
@@ -131,6 +163,11 @@ impl ComponentKind {
             SelectionClass::Group => self == Self::MjColumn,
             SelectionClass::Column => self == Self::MjColumn || self.is_leaf(),
             SelectionClass::Leaf => self.is_leaf(),
+            SelectionClass::Navbar | SelectionClass::NavbarLink => self == Self::MjNavbarLink,
+            SelectionClass::Accordion | SelectionClass::AccordionEl => {
+                self == Self::MjAccordionElement
+            }
+            SelectionClass::Carousel | SelectionClass::CarouselImg => self == Self::MjCarouselImage,
         }
     }
 
@@ -236,8 +273,23 @@ impl ComponentKind {
                 color: None,
                 padding: None,
             }),
+            Self::MjNavbar => ColumnChild::MjNavbar(empty_navbar()),
+            Self::MjAccordion => ColumnChild::MjAccordion(empty_accordion()),
+            Self::MjCarousel => ColumnChild::MjCarousel(empty_carousel()),
             _ => return None,
         })
+    }
+
+    pub(super) fn as_navbar_link(self) -> Option<MjNavbarLink> {
+        (self == Self::MjNavbarLink).then(empty_navbar_link)
+    }
+
+    pub(super) fn as_accordion_element(self) -> Option<MjAccordionElement> {
+        (self == Self::MjAccordionElement).then(empty_accordion_element)
+    }
+
+    pub(super) fn as_carousel_image(self) -> Option<MjCarouselImage> {
+        (self == Self::MjCarouselImage).then(empty_carousel_image)
     }
 }
 
@@ -252,6 +304,12 @@ pub(super) enum SelectionClass {
     Group,
     Column,
     Leaf,
+    Navbar,
+    NavbarLink,
+    Accordion,
+    AccordionEl,
+    Carousel,
+    CarouselImg,
 }
 
 pub(super) fn classify(template: Option<&Template>, id: &TreeId) -> SelectionClass {
@@ -267,7 +325,10 @@ fn classify_path(template: Option<&Template>, path: &[Step]) -> SelectionClass {
         return SelectionClass::Body;
     };
     match last {
-        Step::ColComp(_) | Step::HeroChild(_) => SelectionClass::Leaf,
+        Step::NavbarLink(_) => SelectionClass::NavbarLink,
+        Step::AccordionEl(_) => SelectionClass::AccordionEl,
+        Step::CarouselImg(_) => SelectionClass::CarouselImg,
+        Step::ColComp(_) | Step::HeroChild(_) => classify_column_child(template, path),
         Step::GroupCol(_) => SelectionClass::Column,
         Step::SectionChild(_) => {
             let Some(t) = template else {
@@ -295,6 +356,65 @@ fn classify_path(template: Option<&Template>, path: &[Step]) -> SelectionClass {
             }
         }
     }
+}
+
+fn classify_column_child(template: Option<&Template>, path: &[Step]) -> SelectionClass {
+    match column_child_at(template, path) {
+        Some(ColumnChild::MjNavbar(_)) => SelectionClass::Navbar,
+        Some(ColumnChild::MjAccordion(_)) => SelectionClass::Accordion,
+        Some(ColumnChild::MjCarousel(_)) => SelectionClass::Carousel,
+        _ => SelectionClass::Leaf,
+    }
+}
+
+fn column_child_at<'a>(template: Option<&'a Template>, path: &[Step]) -> Option<&'a ColumnChild> {
+    let t = template?;
+    let mut steps = path.iter();
+    let Step::BodyNode(i) = steps.next()? else {
+        return None;
+    };
+    let mut node = t.body.nodes.get(*i)?;
+    loop {
+        match steps.next() {
+            Some(Step::WrapperChild(j)) => {
+                let BodyNode::MjWrapper(w) = node else {
+                    return None;
+                };
+                node = w.children.get(*j)?;
+            }
+            Some(Step::SectionChild(j)) => {
+                let BodyNode::MjSection(s) = node else {
+                    return None;
+                };
+                return match s.children.get(*j)? {
+                    SectionChild::MjColumn(c) => take_col_comp(c, steps),
+                    SectionChild::MjGroup(g) => {
+                        let Step::GroupCol(k) = steps.next()? else {
+                            return None;
+                        };
+                        take_col_comp(g.children.get(*k)?, steps)
+                    }
+                };
+            }
+            Some(Step::HeroChild(j)) => {
+                let BodyNode::MjHero(h) = node else {
+                    return None;
+                };
+                return h.children.get(*j);
+            }
+            _ => return None,
+        }
+    }
+}
+
+fn take_col_comp<'a>(
+    c: &'a MjColumn,
+    mut steps: std::slice::Iter<'_, Step>,
+) -> Option<&'a ColumnChild> {
+    let Step::ColComp(i) = steps.next()? else {
+        return None;
+    };
+    c.components.get(*i)
 }
 
 fn body_node_at<'a>(template: Option<&'a Template>, path: &[Step]) -> Option<&'a BodyNode> {
@@ -354,6 +474,60 @@ pub(super) fn empty_hero() -> MjHero {
         width: None,
         height: None,
         children: Vec::new(),
+    }
+}
+
+pub(super) fn empty_navbar() -> MjNavbar {
+    MjNavbar {
+        hamburger: false,
+        ico_color: None,
+        base_url: None,
+        align: None,
+        padding: None,
+        links: Vec::new(),
+    }
+}
+
+pub(super) fn empty_navbar_link() -> MjNavbarLink {
+    MjNavbarLink {
+        href: "https://example.com".into(),
+        content: "Link".into(),
+        color: None,
+        padding: None,
+    }
+}
+
+pub(super) fn empty_accordion() -> MjAccordion {
+    MjAccordion {
+        border: None,
+        padding: None,
+        elements: Vec::new(),
+    }
+}
+
+pub(super) fn empty_accordion_element() -> MjAccordionElement {
+    MjAccordionElement {
+        title: "Title".into(),
+        content: "Write something.".into(),
+        background_color: None,
+    }
+}
+
+pub(super) fn empty_carousel() -> MjCarousel {
+    MjCarousel {
+        align: None,
+        padding: None,
+        thumbnails: Thumbnails::Hidden,
+        images: Vec::new(),
+    }
+}
+
+pub(super) fn empty_carousel_image() -> MjCarouselImage {
+    MjCarouselImage {
+        src: "https://dummyimage.com/600x200/cccccc/000000".into(),
+        alt: "Image".into(),
+        href: None,
+        thumbnails_src: None,
     }
 }
 
@@ -431,4 +605,62 @@ pub(super) fn move_picker_selection(rows: &[PickerRow], selected: usize, delta: 
         }
     }
     i
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn kind_labels(class: SelectionClass) -> Vec<&'static str> {
+        picker_rows(class, "")
+            .into_iter()
+            .filter_map(|r| match r {
+                PickerRow::Kind(k) => Some(k.label()),
+                PickerRow::Header(_) => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn column_picker_includes_navbar_not_navbar_link() {
+        let labels = kind_labels(SelectionClass::Column);
+        assert!(labels.contains(&"mj-navbar"));
+        assert!(labels.contains(&"mj-accordion"));
+        assert!(labels.contains(&"mj-carousel"));
+        assert!(labels.contains(&"mj-text"));
+        assert!(!labels.contains(&"mj-navbar-link"));
+        assert!(!labels.contains(&"mj-accordion-element"));
+        assert!(!labels.contains(&"mj-carousel-image"));
+        assert!(!labels.contains(&"email-header"));
+        assert!(!labels.contains(&"mj-section"));
+    }
+
+    #[test]
+    fn section_picker_excludes_nested_kinds() {
+        let labels = kind_labels(SelectionClass::Section { in_wrapper: false });
+        assert!(labels.contains(&"mj-column"));
+        assert!(labels.contains(&"mj-group"));
+        assert!(labels.contains(&"mj-navbar"));
+        assert!(!labels.contains(&"mj-navbar-link"));
+        assert!(!labels.contains(&"mj-accordion-element"));
+        assert!(!labels.contains(&"mj-carousel-image"));
+    }
+
+    #[test]
+    fn wrapper_picker_is_section_and_hero_only() {
+        let labels = kind_labels(SelectionClass::Wrapper);
+        assert_eq!(labels, vec!["mj-section", "mj-hero"]);
+    }
+
+    #[test]
+    fn navbar_picker_is_navbar_link_only() {
+        let labels = kind_labels(SelectionClass::Navbar);
+        assert_eq!(labels, vec!["mj-navbar-link"]);
+    }
+
+    #[test]
+    fn group_picker_is_column_only() {
+        let labels = kind_labels(SelectionClass::Group);
+        assert_eq!(labels, vec!["mj-column"]);
+    }
 }

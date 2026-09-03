@@ -136,6 +136,12 @@ fn insert_at_path(
         SelectionClass::Group => insert_on_group(t, path, kind),
         SelectionClass::Column => insert_on_column(t, path, kind),
         SelectionClass::Leaf => insert_after_leaf(t, path, kind),
+        SelectionClass::Navbar => insert_on_navbar(t, path, kind),
+        SelectionClass::Accordion => insert_on_accordion(t, path, kind),
+        SelectionClass::Carousel => insert_on_carousel(t, path, kind),
+        SelectionClass::NavbarLink => insert_after_navbar_link(t, path, kind),
+        SelectionClass::AccordionEl => insert_after_accordion_el(t, path, kind),
+        SelectionClass::CarouselImg => insert_after_carousel_img(t, path, kind),
         SelectionClass::Body => insert_body(t, t.body.nodes.len(), kind),
         SelectionClass::HeadBrand => Err("illegal"),
     }
@@ -339,6 +345,129 @@ fn insert_leaf_in_section(
             p.push(Step::ColComp(comp_i));
             Ok((TreeId::Path(p), false))
         }
+    }
+}
+
+fn insert_on_navbar(
+    t: &mut Template,
+    path: &[Step],
+    kind: ComponentKind,
+) -> Result<(TreeId, bool), &'static str> {
+    let link = kind.as_navbar_link().ok_or("illegal")?;
+    let ColumnChild::MjNavbar(nav) = column_child_mut(t, path).ok_or("illegal")? else {
+        return Err("illegal");
+    };
+    nav.links.push(link);
+    let idx = nav.links.len() - 1;
+    let mut p = path.to_vec();
+    p.push(Step::NavbarLink(idx));
+    Ok((TreeId::Path(p), false))
+}
+
+fn insert_on_accordion(
+    t: &mut Template,
+    path: &[Step],
+    kind: ComponentKind,
+) -> Result<(TreeId, bool), &'static str> {
+    let el = kind.as_accordion_element().ok_or("illegal")?;
+    let ColumnChild::MjAccordion(acc) = column_child_mut(t, path).ok_or("illegal")? else {
+        return Err("illegal");
+    };
+    acc.elements.push(el);
+    let idx = acc.elements.len() - 1;
+    let mut p = path.to_vec();
+    p.push(Step::AccordionEl(idx));
+    Ok((TreeId::Path(p), false))
+}
+
+fn insert_on_carousel(
+    t: &mut Template,
+    path: &[Step],
+    kind: ComponentKind,
+) -> Result<(TreeId, bool), &'static str> {
+    let img = kind.as_carousel_image().ok_or("illegal")?;
+    let ColumnChild::MjCarousel(car) = column_child_mut(t, path).ok_or("illegal")? else {
+        return Err("illegal");
+    };
+    car.images.push(img);
+    let idx = car.images.len() - 1;
+    let mut p = path.to_vec();
+    p.push(Step::CarouselImg(idx));
+    Ok((TreeId::Path(p), false))
+}
+
+fn insert_after_navbar_link(
+    t: &mut Template,
+    path: &[Step],
+    kind: ComponentKind,
+) -> Result<(TreeId, bool), &'static str> {
+    let link = kind.as_navbar_link().ok_or("illegal")?;
+    let (last, parent) = path.split_last().ok_or("illegal")?;
+    let Step::NavbarLink(i) = last else {
+        return Err("illegal");
+    };
+    let ColumnChild::MjNavbar(nav) = column_child_mut(t, parent).ok_or("illegal")? else {
+        return Err("illegal");
+    };
+    let at = (*i + 1).min(nav.links.len());
+    nav.links.insert(at, link);
+    let mut p = parent.to_vec();
+    p.push(Step::NavbarLink(at));
+    Ok((TreeId::Path(p), false))
+}
+
+fn insert_after_accordion_el(
+    t: &mut Template,
+    path: &[Step],
+    kind: ComponentKind,
+) -> Result<(TreeId, bool), &'static str> {
+    let el = kind.as_accordion_element().ok_or("illegal")?;
+    let (last, parent) = path.split_last().ok_or("illegal")?;
+    let Step::AccordionEl(i) = last else {
+        return Err("illegal");
+    };
+    let ColumnChild::MjAccordion(acc) = column_child_mut(t, parent).ok_or("illegal")? else {
+        return Err("illegal");
+    };
+    let at = (*i + 1).min(acc.elements.len());
+    acc.elements.insert(at, el);
+    let mut p = parent.to_vec();
+    p.push(Step::AccordionEl(at));
+    Ok((TreeId::Path(p), false))
+}
+
+fn insert_after_carousel_img(
+    t: &mut Template,
+    path: &[Step],
+    kind: ComponentKind,
+) -> Result<(TreeId, bool), &'static str> {
+    let img = kind.as_carousel_image().ok_or("illegal")?;
+    let (last, parent) = path.split_last().ok_or("illegal")?;
+    let Step::CarouselImg(i) = last else {
+        return Err("illegal");
+    };
+    let ColumnChild::MjCarousel(car) = column_child_mut(t, parent).ok_or("illegal")? else {
+        return Err("illegal");
+    };
+    let at = (*i + 1).min(car.images.len());
+    car.images.insert(at, img);
+    let mut p = parent.to_vec();
+    p.push(Step::CarouselImg(at));
+    Ok((TreeId::Path(p), false))
+}
+
+fn column_child_mut<'a>(t: &'a mut Template, path: &[Step]) -> Option<&'a mut ColumnChild> {
+    let (last, parent) = path.split_last()?;
+    match last {
+        Step::ColComp(i) => column_mut(t, parent)?.components.get_mut(*i),
+        Step::HeroChild(i) => {
+            let parent_node = body_node_mut(t, parent)?;
+            let BodyNode::MjHero(h) = parent_node else {
+                return None;
+            };
+            h.children.get_mut(*i)
+        }
+        _ => None,
     }
 }
 

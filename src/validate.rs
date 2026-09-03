@@ -77,14 +77,22 @@ fn validate_inner(t: &Template, root: Option<&Path>, opts: ValidateOpts<'_>) -> 
     }
 
     check_color(&mut report, "brand.text_color", &t.brand.text_color);
-    check_color(&mut report, "brand.background_color", &t.brand.background_color);
+    check_color(
+        &mut report,
+        "brand.background_color",
+        &t.brand.background_color,
+    );
     check_color(
         &mut report,
         "brand.button_background",
         &t.brand.button_background,
     );
     check_color(&mut report, "brand.button_color", &t.brand.button_color);
-    check_color(&mut report, "body.background_color", &t.body.background_color);
+    check_color(
+        &mut report,
+        "body.background_color",
+        &t.body.background_color,
+    );
 
     validate_fonts(t, &mut report);
     validate_json_ld(t, &mut report);
@@ -105,7 +113,10 @@ fn validate_inner(t: &Template, root: Option<&Path>, opts: ValidateOpts<'_>) -> 
 
     for font in &t.head.fonts {
         let name = font.name.trim();
-        if !name.is_empty() && !font_haystack.to_ascii_lowercase().contains(&name.to_ascii_lowercase())
+        if !name.is_empty()
+            && !font_haystack
+                .to_ascii_lowercase()
+                .contains(&name.to_ascii_lowercase())
         {
             report.warnings.push(format!(
                 "font '{}' is registered but not used in brand.font_family or any node font_family",
@@ -150,9 +161,7 @@ fn validate_fonts(t: &Template, report: &mut ValidateReport) {
     let mut seen = Vec::new();
     for (i, font) in t.head.fonts.iter().enumerate() {
         if font.name.trim().is_empty() {
-            report
-                .errors
-                .push(format!("head.fonts[{i}].name is empty"));
+            report.errors.push(format!("head.fonts[{i}].name is empty"));
         }
         let key = font.name.trim().to_ascii_lowercase();
         if !key.is_empty() && seen.iter().any(|s: &String| s == &key) {
@@ -204,9 +213,7 @@ fn validate_json_ld(t: &Template, report: &mut ValidateReport) {
                     .errors
                     .push("head.json_ld pretty form contains a forbidden closer".to_string());
             }
-            let any_type = arr.iter().any(|v| {
-                v.get("@type").is_some()
-            });
+            let any_type = arr.iter().any(|v| v.get("@type").is_some());
             if !any_type {
                 report
                     .warnings
@@ -282,15 +289,27 @@ fn walk_body(
     relative_images: &mut bool,
 ) {
     match node {
-        BodyNode::MjSection(section) => walk_section(section, report, root, opts, font_haystack, relative_images),
-        BodyNode::MjWrapper(wrapper) => walk_wrapper(wrapper, report, root, opts, font_haystack, relative_images),
-        BodyNode::MjHero(hero) => walk_hero(hero, report, root, opts, font_haystack, relative_images),
+        BodyNode::MjSection(section) => {
+            walk_section(section, report, root, opts, font_haystack, relative_images)
+        }
+        BodyNode::MjWrapper(wrapper) => {
+            walk_wrapper(wrapper, report, root, opts, font_haystack, relative_images)
+        }
+        BodyNode::MjHero(hero) => {
+            walk_hero(hero, report, root, opts, font_haystack, relative_images)
+        }
         BodyNode::EmailHeader(h) => walk_email_header(h, report, root, opts, relative_images),
         BodyNode::EmailHero(h) => walk_email_hero(h, report, root, opts, relative_images),
         BodyNode::EmailCta(c) => {
-            check_color(report, "email-cta.background_color", opt(&c.background_color));
+            check_color(
+                report,
+                "email-cta.background_color",
+                opt(&c.background_color),
+            );
             if c.button_href.trim().is_empty() {
-                report.errors.push("email-cta.button_href is empty".to_string());
+                report
+                    .errors
+                    .push("email-cta.button_href is empty".to_string());
             }
         }
         BodyNode::EmailArticle(a) => walk_email_article(a, report, root, opts, relative_images),
@@ -310,11 +329,13 @@ fn walk_section(
     font_haystack: &mut String,
     relative_images: &mut bool,
 ) {
-    check_color(report, "mj-section.background_color", opt(&section.background_color));
+    check_color(
+        report,
+        "mj-section.background_color",
+        opt(&section.background_color),
+    );
     if section.children.is_empty() {
-        report
-            .errors
-            .push("mj-section has no children".to_string());
+        report.errors.push("mj-section has no children".to_string());
     }
     for child in &section.children {
         match child {
@@ -336,7 +357,11 @@ fn walk_wrapper(
     font_haystack: &mut String,
     relative_images: &mut bool,
 ) {
-    check_color(report, "mj-wrapper.background_color", opt(&wrapper.background_color));
+    check_color(
+        report,
+        "mj-wrapper.background_color",
+        opt(&wrapper.background_color),
+    );
     for child in &wrapper.children {
         match child {
             BodyNode::MjSection(_) | BodyNode::MjHero(_) => {
@@ -357,7 +382,11 @@ fn walk_group(
     font_haystack: &mut String,
     relative_images: &mut bool,
 ) {
-    check_color(report, "mj-group.background_color", opt(&group.background_color));
+    check_color(
+        report,
+        "mj-group.background_color",
+        opt(&group.background_color),
+    );
     if group.children.is_empty() {
         report.errors.push("mj-group has no columns".to_string());
     }
@@ -374,7 +403,11 @@ fn walk_column(
     font_haystack: &mut String,
     relative_images: &mut bool,
 ) {
-    check_color(report, "mj-column.background_color", opt(&col.background_color));
+    check_color(
+        report,
+        "mj-column.background_color",
+        opt(&col.background_color),
+    );
     check_color(
         report,
         "mj-column.inner_background_color",
@@ -393,9 +426,20 @@ fn walk_hero(
     font_haystack: &mut String,
     relative_images: &mut bool,
 ) {
-    check_color(report, "mj-hero.background_color", opt(&hero.background_color));
+    check_color(
+        report,
+        "mj-hero.background_color",
+        opt(&hero.background_color),
+    );
     if let Some(url) = &hero.background_url {
-        check_optional_image(report, "mj-hero.background_url", url, root, opts, relative_images);
+        check_optional_image(
+            report,
+            "mj-hero.background_url",
+            url,
+            root,
+            opts,
+            relative_images,
+        );
     }
     for child in &hero.children {
         walk_column_child(child, report, root, opts, font_haystack, relative_images);
@@ -424,7 +468,11 @@ fn walk_column_child(
             }
         }
         ColumnChild::MjButton(btn) => {
-            check_color(report, "mj-button.background_color", opt(&btn.background_color));
+            check_color(
+                report,
+                "mj-button.background_color",
+                opt(&btn.background_color),
+            );
             check_color(report, "mj-button.color", opt(&btn.color));
             if let Some(ff) = &btn.font_family {
                 font_haystack.push(' ');
@@ -435,7 +483,14 @@ fn walk_column_child(
             }
         }
         ColumnChild::MjImage(img) => {
-            check_required_image(report, "mj-image.src", &img.src, root, opts, relative_images);
+            check_required_image(
+                report,
+                "mj-image.src",
+                &img.src,
+                root,
+                opts,
+                relative_images,
+            );
             if img.alt.trim().is_empty() {
                 report.errors.push("mj-image.alt is empty".to_string());
             }
@@ -457,10 +512,94 @@ fn walk_column_child(
                     .push("mj-table.content contains </mj-".to_string());
             }
             if !is_single_table_fragment(&table.content) {
-                report
-                    .errors
-                    .push("mj-table.content must be a single <table>…</table> fragment".to_string());
+                report.errors.push(
+                    "mj-table.content must be a single <table>…</table> fragment".to_string(),
+                );
             }
+        }
+        ColumnChild::MjNavbar(nav) => walk_navbar(nav, report),
+        ColumnChild::MjAccordion(acc) => walk_accordion(acc, report),
+        ColumnChild::MjCarousel(car) => walk_carousel(car, report, root, opts, relative_images),
+    }
+}
+
+fn walk_navbar(nav: &crate::model::MjNavbar, report: &mut ValidateReport) {
+    check_color(report, "mj-navbar.ico_color", opt(&nav.ico_color));
+    if nav.links.is_empty() {
+        report
+            .warnings
+            .push("mj-navbar has no mj-navbar-link children".to_string());
+    }
+    for link in &nav.links {
+        if link.href.trim().is_empty() {
+            report
+                .errors
+                .push("mj-navbar-link.href is empty".to_string());
+        }
+        check_color(report, "mj-navbar-link.color", opt(&link.color));
+    }
+}
+
+fn walk_accordion(acc: &crate::model::MjAccordion, report: &mut ValidateReport) {
+    if acc.elements.is_empty() {
+        report
+            .warnings
+            .push("mj-accordion has no mj-accordion-element children".to_string());
+    }
+    for el in &acc.elements {
+        if el.title.trim().is_empty() {
+            report
+                .errors
+                .push("mj-accordion-element.title is empty".to_string());
+        }
+        check_color(
+            report,
+            "mj-accordion-element.background_color",
+            opt(&el.background_color),
+        );
+        if contains_ci(&el.content, "</mj-") {
+            report
+                .errors
+                .push("mj-accordion-element.content contains </mj-".to_string());
+        }
+    }
+}
+
+fn walk_carousel(
+    car: &crate::model::MjCarousel,
+    report: &mut ValidateReport,
+    root: Option<&Path>,
+    opts: ValidateOpts<'_>,
+    relative_images: &mut bool,
+) {
+    if car.images.is_empty() {
+        report
+            .warnings
+            .push("mj-carousel has no mj-carousel-image children".to_string());
+    }
+    for img in &car.images {
+        check_required_image(
+            report,
+            "mj-carousel-image.src",
+            &img.src,
+            root,
+            opts,
+            relative_images,
+        );
+        if img.alt.trim().is_empty() {
+            report
+                .errors
+                .push("mj-carousel-image.alt is empty".to_string());
+        }
+        if let Some(thumb) = &img.thumbnails_src {
+            check_optional_image(
+                report,
+                "mj-carousel-image.thumbnails_src",
+                thumb,
+                root,
+                opts,
+                relative_images,
+            );
         }
     }
 }
@@ -486,8 +625,19 @@ fn walk_email_header(
     opts: ValidateOpts<'_>,
     relative_images: &mut bool,
 ) {
-    check_color(report, "email-header.background_color", opt(&h.background_color));
-    check_optional_image(report, "email-header.logo_src", &h.logo_src, root, opts, relative_images);
+    check_color(
+        report,
+        "email-header.background_color",
+        opt(&h.background_color),
+    );
+    check_optional_image(
+        report,
+        "email-header.logo_src",
+        &h.logo_src,
+        root,
+        opts,
+        relative_images,
+    );
     if !h.logo_src.trim().is_empty() && h.logo_alt.trim().is_empty() {
         report
             .errors
@@ -502,8 +652,19 @@ fn walk_email_hero(
     opts: ValidateOpts<'_>,
     relative_images: &mut bool,
 ) {
-    check_color(report, "email-hero.background_color", opt(&h.background_color));
-    check_optional_image(report, "email-hero.image_src", &h.image_src, root, opts, relative_images);
+    check_color(
+        report,
+        "email-hero.background_color",
+        opt(&h.background_color),
+    );
+    check_optional_image(
+        report,
+        "email-hero.image_src",
+        &h.image_src,
+        root,
+        opts,
+        relative_images,
+    );
     if !h.image_src.trim().is_empty() && h.image_alt.trim().is_empty() {
         report
             .errors
@@ -518,7 +679,14 @@ fn walk_email_article(
     opts: ValidateOpts<'_>,
     relative_images: &mut bool,
 ) {
-    check_optional_image(report, "email-article.image_src", &a.image_src, root, opts, relative_images);
+    check_optional_image(
+        report,
+        "email-article.image_src",
+        &a.image_src,
+        root,
+        opts,
+        relative_images,
+    );
     if !a.image_src.trim().is_empty() && a.image_alt.trim().is_empty() {
         report
             .errors
@@ -617,9 +785,7 @@ fn check_image_src(
     }
     if let Some(root) = root {
         if !local_image_exists(root, s) {
-            report
-                .errors
-                .push(format!("Missing local image: {s}"));
+            report.errors.push(format!("Missing local image: {s}"));
         }
     }
 }
@@ -682,6 +848,37 @@ mod tests {
         t.brand.content_width = 1000;
         let r = validate_template(&t);
         assert!(report_has(&r, "content_width"));
+    }
+
+    #[test]
+    fn navbar_link_empty_href_is_error() {
+        let mut t = Template::minimal();
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            background_color: None,
+            padding: None,
+            full_width: false,
+            children: vec![crate::model::SectionChild::MjColumn(MjColumn {
+                width: None,
+                background_color: None,
+                padding: None,
+                inner_background_color: None,
+                components: vec![ColumnChild::MjNavbar(crate::model::MjNavbar {
+                    hamburger: false,
+                    ico_color: None,
+                    base_url: None,
+                    align: None,
+                    padding: None,
+                    links: vec![crate::model::MjNavbarLink {
+                        href: String::new(),
+                        content: "Home".into(),
+                        color: None,
+                        padding: None,
+                    }],
+                })],
+            })],
+        }));
+        let r = validate_template(&t);
+        assert!(report_has(&r, "mj-navbar-link.href is empty"));
     }
 
     #[test]
@@ -897,10 +1094,7 @@ mod tests {
 
     #[test]
     fn missing_local_image_with_root() {
-        let dir = std::env::temp_dir().join(format!(
-            "dd_emailforge_val_{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("dd_emailforge_val_{}", std::process::id()));
         fs::create_dir_all(dir.join("images")).unwrap();
         let mut t = Template::minimal();
         t.body.nodes.push(BodyNode::MjSection(MjSection {

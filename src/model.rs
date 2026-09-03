@@ -187,6 +187,9 @@ pub enum ColumnChild {
     MjSpacer(MjSpacer),
     MjSocial(MjSocial),
     MjTable(MjTable),
+    MjNavbar(MjNavbar),
+    MjAccordion(MjAccordion),
+    MjCarousel(MjCarousel),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -212,6 +215,15 @@ pub enum SocialMode {
     #[default]
     Horizontal,
     Vertical,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Thumbnails {
+    Visible,
+    #[default]
+    Hidden,
+    Supported,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -384,6 +396,78 @@ pub struct MjTable {
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjNavbar {
+    #[serde(default)]
+    pub hamburger: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ico_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default)]
+    pub links: Vec<MjNavbarLink>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjNavbarLink {
+    #[serde(default)]
+    pub href: String,
+    #[serde(default)]
+    pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjAccordion {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default)]
+    pub elements: Vec<MjAccordionElement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjAccordionElement {
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjCarousel {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default)]
+    pub thumbnails: Thumbnails,
+    #[serde(default)]
+    pub images: Vec<MjCarouselImage>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MjCarouselImage {
+    #[serde(default)]
+    pub src: String,
+    #[serde(default)]
+    pub alt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub href: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumbnails_src: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -561,6 +645,39 @@ mod tests {
                             color: None,
                             padding: None,
                         }),
+                        ColumnChild::MjNavbar(MjNavbar {
+                            hamburger: true,
+                            ico_color: Some("#ffffff".to_string()),
+                            base_url: None,
+                            align: None,
+                            padding: None,
+                            links: vec![MjNavbarLink {
+                                href: "https://example.com".to_string(),
+                                content: "Home".to_string(),
+                                color: None,
+                                padding: None,
+                            }],
+                        }),
+                        ColumnChild::MjAccordion(MjAccordion {
+                            border: None,
+                            padding: None,
+                            elements: vec![MjAccordionElement {
+                                title: "Why?".to_string(),
+                                content: "Because.".to_string(),
+                                background_color: None,
+                            }],
+                        }),
+                        ColumnChild::MjCarousel(MjCarousel {
+                            align: None,
+                            padding: None,
+                            thumbnails: Thumbnails::Hidden,
+                            images: vec![MjCarouselImage {
+                                src: "https://cdn.example.com/slide.png".to_string(),
+                                alt: "Slide".to_string(),
+                                href: None,
+                                thumbnails_src: None,
+                            }],
+                        }),
                     ],
                 })],
             }),
@@ -613,6 +730,10 @@ mod tests {
         assert_eq!(json, "\"x\"");
         let json = serde_json::to_string(&Align::Center).unwrap();
         assert_eq!(json, "\"center\"");
+        let json = serde_json::to_string(&Thumbnails::Hidden).unwrap();
+        assert_eq!(json, "\"hidden\"");
+        let json = serde_json::to_string(&Thumbnails::Supported).unwrap();
+        assert_eq!(json, "\"supported\"");
     }
 
     #[test]

@@ -66,7 +66,7 @@ Pain points this app removes:
 - Saved-template library UI (`~/.config/ldnddev/dd_emailforge/templates/` exists but is unused).
 - Shared `brand.json` / `mj-include` partials / `allowIncludes`.
 - `campaign.json` or a multi-template session.
-- `mj-carousel`, free-form body `mj-raw`, `mj-navbar`, `mj-accordion`, `mj-navbar-link`. JSON-LD is a **typed head field** the emitter wraps in `mj-raw`; authors do not insert raw MJML tags.
+- Free-form body `mj-raw`. JSON-LD is a **typed head field** the emitter wraps in `mj-raw`; authors do not insert raw MJML tags.
 - Sample-data overlay for merge tags.
 - ESP-specific export profiles, send-test, Litmus, dark-mode toggle.
 - Non-Google font hosts (`typekit`, self-hosted `@font-face` files). Google Fonts CSS URLs only in v1.
@@ -550,6 +550,12 @@ mj-divider
 mj-spacer
 mj-social
 mj-table
+mj-navbar
+mj-navbar-link
+mj-accordion
+mj-accordion-element
+mj-carousel
+mj-carousel-image
 ```
 
 The insert picker **filters to kinds legal for the current selection** (disabled/hidden, not insert-and-toast). If the user still confirms an illegal kind (stale selection), toast `"Cannot insert {kind} here"` and do nothing.
@@ -566,7 +572,13 @@ The insert picker **filters to kinds legal for the current selection** (disabled
 | `mj-hero` | illegal | illegal | illegal | illegal | append to `hero.children` (`ColumnChild` only) |
 | `mj-group` | illegal | illegal | illegal | append to `group.children` | illegal |
 | `mj-column` | illegal | illegal | illegal | insert **after** this column in the parent section/group | append to `column.components` |
-| Leaf (`mj-text`, …) | illegal | illegal | illegal | illegal | insert **after** this leaf in the same column |
+| Leaf (`mj-text`, … `mj-table`) | illegal | illegal | illegal | illegal | insert **after** this leaf in the same column (`ColumnChild` only; not nested kinds) |
+| `mj-navbar` | illegal | illegal | illegal | illegal | illegal for column children; `mj-navbar-link` appends to `navbar.links` |
+| `mj-navbar-link` | illegal | illegal | illegal | illegal | insert **after** this link in the same navbar |
+| `mj-accordion` | illegal | illegal | illegal | illegal | illegal for column children; `mj-accordion-element` appends to `accordion.elements` |
+| `mj-accordion-element` | illegal | illegal | illegal | illegal | insert **after** this element in the same accordion |
+| `mj-carousel` | illegal | illegal | illegal | illegal | illegal for column children; `mj-carousel-image` appends to `carousel.images` |
+| `mj-carousel-image` | illegal | illegal | illegal | illegal | insert **after** this image in the same carousel |
 
 Wrapper JSON remains `Vec<BodyNode>` but validate + insert both restrict it to `mj-section` | `mj-hero`. Email-* blocks are **not** legal wrapper children even though they emit sections.
 

@@ -49,7 +49,7 @@ Template
 ├── head           title, breakpoint, fonts[], json_ld, css, css_inline
 └── body.nodes[]
     ├── email-* blocks (header, hero, cta, article, footer)
-    └── MJML primitives (section / wrapper / hero / group / column / text / …)
+    └── MJML primitives (section / wrapper / hero / group / column / text / navbar / accordion / carousel / …)
 ```
 
 One JSON file, one folder. Images live in `images/`. Preview compile lives in `.preview/` (gitignored). Official mjml is pinned in the template `package.json` (`mjml ^5.4.0`).

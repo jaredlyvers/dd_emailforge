@@ -18,6 +18,7 @@ pub const SOCIAL_MODE_OPTIONS: &[&str] = &["horizontal", "vertical"];
 pub const IMAGE_POS_OPTIONS: &[&str] = &["top", "left", "right"];
 pub const SOCIAL_NET_OPTIONS: &[&str] =
     &["facebook", "instagram", "linkedin", "x", "github", "web"];
+pub const THUMBNAILS_OPTIONS: &[&str] = &["hidden", "visible", "supported"];
 
 pub static FONT_ITEM_FORM: EditForm = EditForm {
     title: "font",
@@ -475,6 +476,135 @@ pub static SOCIAL_FORM: EditForm = EditForm {
                 min_items: 0,
                 summary_field_id: "name",
             },
+            false,
+        ),
+    ],
+};
+
+pub static NAVBAR_FORM: EditForm = EditForm {
+    title: "mj-navbar",
+    fields: &[
+        f(
+            "hamburger",
+            "Hamburger",
+            FieldKind::Enum {
+                options: BOOL_OPTIONS,
+                default: "false",
+            },
+            false,
+        ),
+        f(
+            "ico_color",
+            "Icon color",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        f(
+            "base_url",
+            "Base URL",
+            FieldKind::Url { default: "" },
+            false,
+        ),
+        f(
+            "align",
+            "Align",
+            FieldKind::Enum {
+                options: ALIGN_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+    ],
+};
+
+pub static NAVBAR_LINK_FORM: EditForm = EditForm {
+    title: "mj-navbar-link",
+    fields: &[
+        f(
+            "href",
+            "Href",
+            FieldKind::Url {
+                default: "https://example.com",
+            },
+            true,
+        ),
+        f(
+            "content",
+            "Label",
+            FieldKind::Text { default: "Link" },
+            true,
+        ),
+        f("color", "Color", FieldKind::Text { default: "" }, false),
+        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+    ],
+};
+
+pub static ACCORDION_FORM: EditForm = EditForm {
+    title: "mj-accordion",
+    fields: &[
+        f("border", "Border", FieldKind::Text { default: "" }, false),
+        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+    ],
+};
+
+pub static ACCORDION_ELEMENT_FORM: EditForm = EditForm {
+    title: "mj-accordion-element",
+    fields: &[
+        f("title", "Title", FieldKind::Text { default: "Title" }, true),
+        f(
+            "content",
+            "Content",
+            FieldKind::Textarea {
+                rows: 6,
+                default: "",
+            },
+            false,
+        ),
+        f(
+            "background_color",
+            "Background",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+    ],
+};
+
+pub static CAROUSEL_FORM: EditForm = EditForm {
+    title: "mj-carousel",
+    fields: &[
+        f(
+            "align",
+            "Align",
+            FieldKind::Enum {
+                options: ALIGN_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        f(
+            "thumbnails",
+            "Thumbnails",
+            FieldKind::Enum {
+                options: THUMBNAILS_OPTIONS,
+                default: "hidden",
+            },
+            true,
+        ),
+    ],
+};
+
+pub static CAROUSEL_IMAGE_FORM: EditForm = EditForm {
+    title: "mj-carousel-image",
+    fields: &[
+        f("src", "Src", FieldKind::Url { default: "" }, true),
+        f("alt", "Alt", FieldKind::Text { default: "" }, true),
+        f("href", "Href", FieldKind::Url { default: "" }, false),
+        f(
+            "thumbnails_src",
+            "Thumbnail src",
+            FieldKind::Url { default: "" },
             false,
         ),
     ],

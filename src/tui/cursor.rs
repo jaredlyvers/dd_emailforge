@@ -3,8 +3,9 @@ use anyhow::{anyhow, Context, Result};
 
 use crate::model::{
     Align, BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
-    HeroMode, ImagePosition, MjColumn, MjGroup, MjHero, MjSocial, MjSocialElement, SectionChild,
-    SocialMode, SocialNetwork, Template, WebFont,
+    HeroMode, ImagePosition, MjAccordion, MjAccordionElement, MjCarousel, MjCarouselImage,
+    MjColumn, MjGroup, MjHero, MjNavbar, MjNavbarLink, MjSocial, MjSocialElement, SectionChild,
+    SocialMode, SocialNetwork, Template, Thumbnails, WebFont,
 };
 
 use super::editform::{self, EditFormState};
@@ -115,6 +116,9 @@ fn path_to_form(t: &Template, path: &[Step]) -> Option<EditFormState> {
         Located::Column(c) => Some(column_to_form(c)),
         Located::Group(g) => Some(group_to_form(g)),
         Located::Leaf(c) => Some(leaf_to_form(c)),
+        Located::NavbarLink(l) => Some(navbar_link_to_form(l)),
+        Located::AccordionEl(e) => Some(accordion_el_to_form(e)),
+        Located::CarouselImg(i) => Some(carousel_img_to_form(i)),
     }
 }
 
@@ -124,6 +128,9 @@ fn apply_path(t: &mut Template, path: &[Step], state: &EditFormState) -> Result<
         LocatedMut::Column(c) => apply_column(c, state),
         LocatedMut::Group(g) => apply_group(g, state),
         LocatedMut::Leaf(c) => apply_leaf(c, state),
+        LocatedMut::NavbarLink(l) => apply_navbar_link(l, state),
+        LocatedMut::AccordionEl(e) => apply_accordion_el(e, state),
+        LocatedMut::CarouselImg(i) => apply_carousel_img(i, state),
     }
 }
 
@@ -132,6 +139,9 @@ enum Located<'a> {
     Column(&'a MjColumn),
     Group(&'a MjGroup),
     Leaf(&'a ColumnChild),
+    NavbarLink(&'a MjNavbarLink),
+    AccordionEl(&'a MjAccordionElement),
+    CarouselImg(&'a MjCarouselImage),
 }
 
 enum LocatedMut<'a> {
@@ -139,6 +149,9 @@ enum LocatedMut<'a> {
     Column(&'a mut MjColumn),
     Group(&'a mut MjGroup),
     Leaf(&'a mut ColumnChild),
+    NavbarLink(&'a mut MjNavbarLink),
+    AccordionEl(&'a mut MjAccordionElement),
+    CarouselImg(&'a mut MjCarouselImage),
 }
 
 fn locate<'a>(t: &'a Template, path: &[Step]) -> Option<Located<'a>> {
@@ -169,7 +182,7 @@ fn locate<'a>(t: &'a Template, path: &[Step]) -> Option<Located<'a>> {
                 let BodyNode::MjHero(h) = node else {
                     return None;
                 };
-                return Some(Located::Leaf(h.children.get(*j)?));
+                return locate_column_child(h.children.get(*j)?, steps);
             }
             _ => return None,
         }
@@ -182,7 +195,35 @@ fn locate_column<'a>(
 ) -> Option<Located<'a>> {
     match steps.next() {
         None => Some(Located::Column(c)),
-        Some(Step::ColComp(i)) => Some(Located::Leaf(c.components.get(*i)?)),
+        Some(Step::ColComp(i)) => locate_column_child(c.components.get(*i)?, steps),
+        _ => None,
+    }
+}
+
+fn locate_column_child<'a>(
+    c: &'a ColumnChild,
+    mut steps: std::slice::Iter<'_, Step>,
+) -> Option<Located<'a>> {
+    match steps.next() {
+        None => Some(Located::Leaf(c)),
+        Some(Step::NavbarLink(i)) => {
+            let ColumnChild::MjNavbar(n) = c else {
+                return None;
+            };
+            Some(Located::NavbarLink(n.links.get(*i)?))
+        }
+        Some(Step::AccordionEl(i)) => {
+            let ColumnChild::MjAccordion(n) = c else {
+                return None;
+            };
+            Some(Located::AccordionEl(n.elements.get(*i)?))
+        }
+        Some(Step::CarouselImg(i)) => {
+            let ColumnChild::MjCarousel(n) = c else {
+                return None;
+            };
+            Some(Located::CarouselImg(n.images.get(*i)?))
+        }
         _ => None,
     }
 }
@@ -223,7 +264,7 @@ fn locate_mut<'a>(t: &'a mut Template, path: &[Step]) -> Option<LocatedMut<'a>> 
                 let BodyNode::MjHero(h) = node else {
                     return None;
                 };
-                return Some(LocatedMut::Leaf(h.children.get_mut(*j)?));
+                return locate_column_child_mut(h.children.get_mut(*j)?, steps);
             }
             _ => return None,
         }
@@ -236,7 +277,35 @@ fn locate_column_mut<'a>(
 ) -> Option<LocatedMut<'a>> {
     match steps.next() {
         None => Some(LocatedMut::Column(c)),
-        Some(Step::ColComp(i)) => Some(LocatedMut::Leaf(c.components.get_mut(*i)?)),
+        Some(Step::ColComp(i)) => locate_column_child_mut(c.components.get_mut(*i)?, steps),
+        _ => None,
+    }
+}
+
+fn locate_column_child_mut<'a>(
+    c: &'a mut ColumnChild,
+    mut steps: std::slice::Iter<'_, Step>,
+) -> Option<LocatedMut<'a>> {
+    match steps.next() {
+        None => Some(LocatedMut::Leaf(c)),
+        Some(Step::NavbarLink(i)) => {
+            let ColumnChild::MjNavbar(n) = c else {
+                return None;
+            };
+            Some(LocatedMut::NavbarLink(n.links.get_mut(*i)?))
+        }
+        Some(Step::AccordionEl(i)) => {
+            let ColumnChild::MjAccordion(n) = c else {
+                return None;
+            };
+            Some(LocatedMut::AccordionEl(n.elements.get_mut(*i)?))
+        }
+        Some(Step::CarouselImg(i)) => {
+            let ColumnChild::MjCarousel(n) = c else {
+                return None;
+            };
+            Some(LocatedMut::CarouselImg(n.images.get_mut(*i)?))
+        }
         _ => None,
     }
 }
@@ -408,6 +477,9 @@ fn leaf_to_form(c: &ColumnChild) -> EditFormState {
             st.set("padding", opt_get(&tb.padding));
             st
         }
+        ColumnChild::MjNavbar(n) => navbar_to_form(n),
+        ColumnChild::MjAccordion(a) => accordion_to_form(a),
+        ColumnChild::MjCarousel(c) => carousel_to_form(c),
     }
 }
 
@@ -462,7 +534,106 @@ fn apply_leaf(c: &mut ColumnChild, state: &EditFormState) -> Result<()> {
             tb.padding = opt_set(state, "padding");
             Ok(())
         }
+        ColumnChild::MjNavbar(n) => apply_navbar(n, state),
+        ColumnChild::MjAccordion(a) => apply_accordion(a, state),
+        ColumnChild::MjCarousel(c) => apply_carousel(c, state),
     }
+}
+
+fn navbar_to_form(n: &MjNavbar) -> EditFormState {
+    let mut st = EditFormState::new(&editform::NAVBAR_FORM);
+    st.set("hamburger", bool_str(n.hamburger));
+    st.set("ico_color", opt_get(&n.ico_color));
+    st.set("base_url", opt_get(&n.base_url));
+    st.set("align", align_str(n.align));
+    st.set("padding", opt_get(&n.padding));
+    st
+}
+
+fn apply_navbar(n: &mut MjNavbar, state: &EditFormState) -> Result<()> {
+    n.hamburger = parse_bool(state.get("hamburger"))?;
+    n.ico_color = opt_set(state, "ico_color");
+    n.base_url = opt_set(state, "base_url");
+    n.align = parse_align(state.get("align"))?;
+    n.padding = opt_set(state, "padding");
+    Ok(())
+}
+
+fn navbar_link_to_form(l: &MjNavbarLink) -> EditFormState {
+    let mut st = EditFormState::new(&editform::NAVBAR_LINK_FORM);
+    st.set("href", l.href.clone());
+    st.set("content", l.content.clone());
+    st.set("color", opt_get(&l.color));
+    st.set("padding", opt_get(&l.padding));
+    st
+}
+
+fn apply_navbar_link(l: &mut MjNavbarLink, state: &EditFormState) -> Result<()> {
+    l.href = state.get("href").to_string();
+    l.content = state.get("content").to_string();
+    l.color = opt_set(state, "color");
+    l.padding = opt_set(state, "padding");
+    Ok(())
+}
+
+fn accordion_to_form(a: &MjAccordion) -> EditFormState {
+    let mut st = EditFormState::new(&editform::ACCORDION_FORM);
+    st.set("border", opt_get(&a.border));
+    st.set("padding", opt_get(&a.padding));
+    st
+}
+
+fn apply_accordion(a: &mut MjAccordion, state: &EditFormState) -> Result<()> {
+    a.border = opt_set(state, "border");
+    a.padding = opt_set(state, "padding");
+    Ok(())
+}
+
+fn accordion_el_to_form(e: &MjAccordionElement) -> EditFormState {
+    let mut st = EditFormState::new(&editform::ACCORDION_ELEMENT_FORM);
+    st.set("title", e.title.clone());
+    st.set("content", e.content.clone());
+    st.set("background_color", opt_get(&e.background_color));
+    st
+}
+
+fn apply_accordion_el(e: &mut MjAccordionElement, state: &EditFormState) -> Result<()> {
+    e.title = state.get("title").to_string();
+    e.content = state.get("content").to_string();
+    e.background_color = opt_set(state, "background_color");
+    Ok(())
+}
+
+fn carousel_to_form(c: &MjCarousel) -> EditFormState {
+    let mut st = EditFormState::new(&editform::CAROUSEL_FORM);
+    st.set("align", align_str(c.align));
+    st.set("padding", opt_get(&c.padding));
+    st.set("thumbnails", thumbnails_str(c.thumbnails));
+    st
+}
+
+fn apply_carousel(c: &mut MjCarousel, state: &EditFormState) -> Result<()> {
+    c.align = parse_align(state.get("align"))?;
+    c.padding = opt_set(state, "padding");
+    c.thumbnails = parse_thumbnails(state.get("thumbnails"))?;
+    Ok(())
+}
+
+fn carousel_img_to_form(i: &MjCarouselImage) -> EditFormState {
+    let mut st = EditFormState::new(&editform::CAROUSEL_IMAGE_FORM);
+    st.set("src", i.src.clone());
+    st.set("alt", i.alt.clone());
+    st.set("href", opt_get(&i.href));
+    st.set("thumbnails_src", opt_get(&i.thumbnails_src));
+    st
+}
+
+fn apply_carousel_img(i: &mut MjCarouselImage, state: &EditFormState) -> Result<()> {
+    i.src = state.get("src").trim().to_string();
+    i.alt = state.get("alt").to_string();
+    i.href = opt_set(state, "href");
+    i.thumbnails_src = opt_set(state, "thumbnails_src");
+    Ok(())
 }
 
 fn social_to_form(s: &MjSocial) -> EditFormState {
@@ -710,6 +881,23 @@ fn parse_image_pos(s: &str) -> Result<ImagePosition> {
         "left" => Ok(ImagePosition::Left),
         "right" => Ok(ImagePosition::Right),
         other => Err(anyhow!("invalid image_position: {other}")),
+    }
+}
+
+fn thumbnails_str(t: Thumbnails) -> &'static str {
+    match t {
+        Thumbnails::Visible => "visible",
+        Thumbnails::Hidden => "hidden",
+        Thumbnails::Supported => "supported",
+    }
+}
+
+fn parse_thumbnails(s: &str) -> Result<Thumbnails> {
+    match s.trim() {
+        "visible" => Ok(Thumbnails::Visible),
+        "hidden" => Ok(Thumbnails::Hidden),
+        "supported" => Ok(Thumbnails::Supported),
+        other => Err(anyhow!("invalid thumbnails: {other}")),
     }
 }
 

@@ -25,5 +25,5 @@ fields:
   - id: components
     required: true
     type: list
-    maps_to: "column children (mj-text, mj-button, …)"
+    maps_to: "column children (mj-text, mj-button, mj-image, mj-divider, mj-spacer, mj-social, mj-table, mj-navbar, mj-accordion, mj-carousel)"
 ---
