@@ -208,6 +208,28 @@ fn f3_on_minimal_template_passes() {
 }
 
 #[test]
+fn f3_on_transactional_starter_is_clean() {
+    let t = crate::model::Template::starter(crate::starters::StarterKind::Transactional, "receipt");
+    let mut app = App::new(
+        AppTheme::default(),
+        "default".to_string(),
+        None,
+        Some(t),
+        None,
+    );
+    send_key(&mut app, KeyCode::F(3), KeyModifiers::NONE);
+    assert!(app.modal.is_none());
+    assert!(app
+        .toasts
+        .iter()
+        .any(|t| t.message.contains("Validation passed")));
+    assert!(!app
+        .toasts
+        .iter()
+        .any(|t| matches!(t.level, ToastLevel::Warning)));
+}
+
+#[test]
 fn f3_on_invalid_template_opens_modal() {
     let mut t = crate::model::Template::minimal();
     t.name.clear();

@@ -3,6 +3,7 @@ mod mjml;
 mod model;
 mod paths;
 mod preview;
+mod starters;
 mod storage;
 mod tui;
 mod validate;
@@ -10,6 +11,8 @@ mod validate;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::process::ExitCode;
+
+use starters::StarterKind;
 
 use storage::{load_template, resolve_template_path, LoadError};
 use validate::validate_template_with_root;
@@ -27,6 +30,13 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Create a template folder (JSON, images/, package.json, .gitignore).
+    Init {
+        dir: PathBuf,
+        /// Starter: welcome | newsletter | promo | transactional (default: welcome).
+        #[arg(long, value_enum, default_value_t = StarterKind::Welcome)]
+        from: StarterKind,
+    },
     /// Open the TUI on a template.json or a folder containing one.
     Tui { path: Option<PathBuf> },
     /// Structural + image validation. Non-zero exit on errors. Warnings on stderr.
@@ -51,6 +61,7 @@ enum Command {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
+        Command::Init { dir, from } => cmd_init(&dir, from),
         Command::Tui { path } => match tui::run_tui(path) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -62,6 +73,22 @@ fn main() -> ExitCode {
         Command::Show { path } => cmd_show(&path),
         Command::Export { path, out } => cmd_export(&path, out.as_deref()),
         Command::Preview { path, port } => cmd_preview(&path, port),
+    }
+}
+
+fn cmd_init(dir: &PathBuf, from: StarterKind) -> ExitCode {
+    match starters::init_template_dir(dir, from) {
+        Ok(json) => {
+            println!("Created {}", dir.display());
+            println!("Wrote {}", json.display());
+            println!("Wrote {}", dir.join("package.json").display());
+            println!("Next: cd {} && npm install", dir.display());
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{e:#}");
+            ExitCode::from(1)
+        }
     }
 }
 
@@ -234,7 +261,9 @@ fn cmd_preview(path: &PathBuf, port: u16) -> ExitCode {
     if let Err(e) = crate::emit::write_mjml(
         &template,
         &mjml_path,
-        crate::emit::EmitMode::Preview { origin: origin.clone() },
+        crate::emit::EmitMode::Preview {
+            origin: origin.clone(),
+        },
     ) {
         eprintln!("{e:#}");
         return ExitCode::from(1);
