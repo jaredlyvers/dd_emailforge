@@ -88,7 +88,9 @@ impl AppTheme {
         Self::load_from(theme_candidates())
     }
 
-    pub(crate) fn load_from(candidates: Vec<(PathBuf, &'static str)>) -> (Self, String, Option<String>) {
+    pub(crate) fn load_from(
+        candidates: Vec<(PathBuf, &'static str)>,
+    ) -> (Self, String, Option<String>) {
         let mut warning: Option<String> = None;
 
         for (path, src) in candidates {
@@ -374,8 +376,7 @@ colors:
     #[test]
     fn load_accepts_version_1() {
         let path = temp_yaml(&valid_yaml("version: 1"));
-        let (theme, source, warning) =
-            AppTheme::load_from(vec![(path.clone(), "local")]);
+        let (theme, source, warning) = AppTheme::load_from(vec![(path.clone(), "local")]);
         let _ = fs::remove_file(&path);
         assert_eq!(source, "local");
         assert!(warning.is_none());
@@ -386,8 +387,7 @@ colors:
     #[test]
     fn load_skips_version_2_with_warning() {
         let path = temp_yaml(&valid_yaml("version: 2"));
-        let (_theme, source, warning) =
-            AppTheme::load_from(vec![(path.clone(), "local")]);
+        let (_theme, source, warning) = AppTheme::load_from(vec![(path.clone(), "local")]);
         let _ = fs::remove_file(&path);
         assert_eq!(source, "default");
         let msg = warning.expect("warning");
@@ -397,8 +397,7 @@ colors:
     #[test]
     fn load_skips_missing_version_with_warning() {
         let path = temp_yaml(&valid_yaml(""));
-        let (_theme, source, warning) =
-            AppTheme::load_from(vec![(path.clone(), "local")]);
+        let (_theme, source, warning) = AppTheme::load_from(vec![(path.clone(), "local")]);
         let _ = fs::remove_file(&path);
         assert_eq!(source, "default");
         let msg = warning.expect("warning");
@@ -419,6 +418,9 @@ colors:
         let path = temp_yaml(&yaml);
         let (theme, _, _) = AppTheme::load_from(vec![(path.clone(), "local")]);
         let _ = fs::remove_file(&path);
-        assert_eq!(theme.header_quotes, vec!["Custom tagline only.".to_string()]);
+        assert_eq!(
+            theme.header_quotes,
+            vec!["Custom tagline only.".to_string()]
+        );
     }
 }

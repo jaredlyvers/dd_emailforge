@@ -493,8 +493,8 @@ There is **no template list** in chrome. One template is open.
 **Details inspector:**
 
 - Title `Details — {selected label}` (e.g. `Details — mj-button`, `Details — brand`).
-- For layout nodes: ascii map of the 600px (or `brand.content_width`) canvas, scaled to pane width. Siteforge's `details/ascii.rs` is the pattern, but the map is an email canvas (stacked sections, column boxes), not a CSS grid.
-- Clickable ascii regions hit-test to select a column/component (store rects like siteforge `page_details_text`).
+- Full-email ascii blueprint of every layout node (stacked sections, column boxes, nested components), scaled to pane width. The selected tree node is highlighted with `selected_background` + `text_active_focus`.
+- Click a blueprint region to select that element in the Structure tree (innermost hit wins). Store rects like siteforge `page_details_text`.
 - For `[HEAD]`: subject, preheader, lang, title, breakpoint, base_url, fonts (`name` + href host), `json_ld` (first `@type` or `(empty)`), `css` (`N lines` or `(empty)`), `css_inline` as labeled values (Enter still opens the form).
 - For `[BRAND]`: swatches are **not** drawn with invented tokens — print hex as `text_primary` text, e.g. `button_background  #FFAF46`.
 - `PageUp`/`PageDown` and wheel scroll the inspector. Scrollbar on overflow.

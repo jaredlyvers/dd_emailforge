@@ -195,7 +195,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
             ("Wheel", "Scroll the pane under the cursor"),
             ("Click tree row", "Select (glyph column expands)"),
             ("Click pane", "Focus Structure or Details"),
-            ("Click ascii map", "Select column or component"),
+            ("Click blueprint", "Select that element in the tree"),
             ("Double-click", "Same as Enter (open FormEdit)"),
         ],
         "•",

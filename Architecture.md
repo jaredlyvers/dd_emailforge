@@ -2,7 +2,7 @@
 
 Terminal-UI email template builder. Authors edit one typed `template.json` in a Ratatui TUI; the app emits strict MJML and compiles HTML with the official Node `mjml` CLI (MJML 5). Single binary, no server in production, no database.
 
-Living product spec: `docs/SPEC.md`. Visual contract: `LDNDDEV_TUI_VISUAL_STANDARD.md`. Component fields: `components/*.md`. Design lock: `docs/DESIGN.md`.
+Living product spec: `docs/SPEC.md`. Visual contract: `LDNDDEV_TUI_VISUAL_STANDARD.md`. Component fields: `components/*.md`. Design lock: `docs/DESIGN.md`. End-user walkthrough: `docs/tutorial/index.html` (screenshots via `docs/tutorial/capture.sh`).
 
 ## Crate layout
 

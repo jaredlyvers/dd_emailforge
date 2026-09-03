@@ -264,6 +264,7 @@ impl App {
                 if let Some((_, id)) = self
                     .details_hit_areas
                     .iter()
+                    .rev()
                     .find(|(r, _)| contains(*r, x, y))
                     .cloned()
                 {

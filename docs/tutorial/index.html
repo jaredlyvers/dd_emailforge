@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dd_emailforge tutorial — setup, install, and the TUI</title>
+  <style>
+    :root {
+      --bg: #0F1114;
+      --panel: #1C1E21;
+      --body: #2A2D31;
+      --text: #F5F6F7;
+      --muted: #9EA3AA;
+      --accent: #FFAF46;
+      --focus: #64B4F5;
+      --ok: #82e0aa;
+      --border: #3a3d42;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.55 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    }
+    a { color: var(--focus); }
+    a:hover { color: var(--accent); }
+    header.hero {
+      border-bottom: 1px solid var(--border);
+      padding: 48px 24px 40px;
+      background: linear-gradient(180deg, #16181c 0%, var(--bg) 100%);
+    }
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      letter-spacing: -0.03em;
+      margin: 0 0 12px;
+    }
+    .lede { color: var(--muted); font-size: 1.05rem; max-width: 42em; }
+    .accent { color: var(--accent); }
+    nav.toc {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 28px 0 8px;
+    }
+    nav.toc h2 { margin: 0 0 8px; font-size: 0.85rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+    nav.toc ol { margin: 0; padding-left: 1.2em; }
+    nav.toc li { margin: 4px 0; }
+    main { padding: 8px 24px 64px; }
+    h2 {
+      margin-top: 48px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+    }
+    h3 { margin-top: 28px; font-size: 1.1rem; color: var(--focus); }
+    p, li { color: var(--text); }
+    .muted { color: var(--muted); }
+    figure {
+      margin: 20px 0 8px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    figcaption {
+      padding: 10px 14px 12px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    pre, .term {
+      background: #121417;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font: 13px/1.45 "DejaVu Sans Mono", "Liberation Mono", ui-monospace, monospace;
+      color: var(--text);
+    }
+    code {
+      font-family: "DejaVu Sans Mono", "Liberation Mono", ui-monospace, monospace;
+      font-size: 0.9em;
+      color: var(--accent);
+    }
+    p code, li code { background: var(--body); padding: 0.1em 0.35em; border-radius: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th { color: var(--accent); font-weight: 600; }
+    .callout {
+      background: var(--panel);
+      border-left: 3px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .callout.info { border-left-color: var(--focus); }
+    footer.site {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    kbd {
+      display: inline-block;
+      padding: 0 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: var(--body);
+      font: 0.85em/1.6 ui-monospace, monospace;
+      color: var(--focus);
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="muted" style="margin:0 0 8px">ldnddev · dd_emailforge</p>
+      <h1>Build an email in the terminal.</h1>
+      <p class="lede">This tutorial walks through setup, install, and the TUI: structure tree, details blueprint, insert, FormEdit, preview, and export. Screenshots are captured from the live renderer — see <a href="#screenshots">Updating screenshots</a> if the UI changes.</p>
+    </div>
+  </header>
+  <main>
+    <div class="wrap">
+      <nav class="toc" aria-label="Contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#what">What you get</a></li>
+          <li><a href="#prereqs">Prerequisites</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a href="#init">Create a template</a></li>
+          <li><a href="#tui">Open the TUI</a></li>
+          <li><a href="#edit">Edit, insert, select</a></li>
+          <li><a href="#ship">Validate, preview, export</a></li>
+          <li><a href="#keys">Keys</a></li>
+          <li><a href="#theme">Theme</a></li>
+          <li><a href="#screenshots">Updating screenshots</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="what">What you get</h2>
+      <p>dd_emailforge is a Ratatui TUI. You edit a typed <code>template.json</code>. The app emits strict MJML and compiles HTML with official <strong>MJML 5</strong> (<code>mjml ^5.4.0</code>).</p>
+      <ul>
+        <li>JSON is the source of truth. One folder per template.</li>
+        <li>Brand tokens live on the template and emit as <code>mj-attributes</code>.</li>
+        <li>Preview is a loopback wrapper (600px + 320px). Exported HTML has none of that chrome.</li>
+      </ul>
+      <pre>template.json  →  template.mjml  →  template.html
+                      │
+                      └─ mjml -w → .preview/  (TUI <kbd>p</kbd> / CLI preview)</pre>
+
+      <h2 id="prereqs">Prerequisites</h2>
+      <ul>
+        <li><strong>Rust / cargo</strong> — to build the binary (<code>./install.sh</code> calls <code>cargo build --release</code>).</li>
+        <li><strong>Node 20+</strong> — MJML 5’s compiler. Needed to preview or export HTML.</li>
+        <li>Optional: a global <code>mjml</code> on your <code>PATH</code>. If you have it, skip <code>npm install</code> after <code>init</code>.</li>
+      </ul>
+
+      <h2 id="install">Install</h2>
+      <p>From a clone of this repo:</p>
+      <pre>./install.sh</pre>
+      <p>That builds release, installs <code>$HOME/.local/bin/dd_emailforge</code>, writes the default theme to <code>~/.config/ldnddev/dd_emailforge_theme.yml</code> (only if none exists), and creates <code>~/.config/ldnddev/dd_emailforge/templates/</code>.</p>
+      <div class="callout info">
+        Override paths with <code>PREFIX</code>, <code>BIN_DIR</code>, or <code>CONFIG_DIR</code>. Honors <code>XDG_CONFIG_HOME</code>. Re-run is safe: an existing theme is left alone; the binary is overwritten.
+      </div>
+      <pre>./install.sh uninstall    # binary + theme + empty dirs
+./install.sh --help</pre>
+      <p>If <code>~/.local/bin</code> is not on your <code>PATH</code>, add it:</p>
+      <pre>export PATH="$HOME/.local/bin:$PATH"</pre>
+
+      <h2 id="init">Create a template</h2>
+      <pre>dd_emailforge init ./my-email --from welcome
+# skip npm install when `mjml` is already on PATH
+cd my-email && npm install
+dd_emailforge tui .</pre>
+      <p>A directory argument means <code>dir/template.json</code>. <code>init</code> writes:</p>
+      <ul>
+        <li><code>template.json</code> — the document</li>
+        <li><code>images/.gitkeep</code> — drop local images here</li>
+        <li><code>package.json</code> — pins <code>mjml ^5.4.0</code> (does <em>not</em> run npm)</li>
+        <li><code>.gitignore</code> — <code>.preview/</code>, <code>node_modules/</code>, <code>template.json.backup</code></li>
+      </ul>
+      <table>
+        <thead>
+          <tr><th><code>--from</code></th><th>Intent</th><th>Footer</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>welcome</code> (default)</td><td>Post-signup</td><td>address + Unsubscribe + <code>*|UNSUB|*</code></td></tr>
+          <tr><td><code>newsletter</code></td><td>Digest</td><td>same</td></tr>
+          <tr><td><code>promo</code></td><td>Sale</td><td>same</td></tr>
+          <tr><td><code>transactional</code></td><td>Receipt / reset</td><td>address; empty unsub label <em>and</em> href (F3 stays clean)</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">Welcome ships Google Font Raleway. Starter images are <code>https://dummyimage.com/…</code> placeholders.</p>
+
+      <h2 id="tui">Open the TUI</h2>
+      <p><code>dd_emailforge tui</code> with no path still launches chrome. You’ll get an info toast until a template exists:</p>
+      <figure>
+        <img src="images/tui-empty.png" alt="Empty TUI: Structure shows HEAD, BRAND, BODY; a toast says run init">
+        <figcaption>No template open. Run <code>dd_emailforge init &lt;dir&gt;</code>, then <code>tui</code> on that folder.</figcaption>
+      </figure>
+      <p>After <code>init --from welcome</code>:</p>
+      <figure>
+        <img src="images/tui-welcome.png" alt="Welcome starter in the TUI: structure tree on the left, full email blueprint on the right">
+        <figcaption>Master/detail: Structure tree (left) and a full-email ascii blueprint (right). Footer starts with <kbd>F1: Help</kbd>. Quit is <kbd>Ctrl+Q</kbd> only — bare <kbd>q</kbd> never quits.</figcaption>
+      </figure>
+      <h3>Chrome</h3>
+      <ul>
+        <li><strong>Header</strong> — app name + a rotating tagline (3 rows, including borders).</li>
+        <li><strong>Structure</strong> — <code>[HEAD]</code>, <code>[BRAND]</code>, <code>[BODY]</code>, then sections / columns / components. <kbd>j</kbd>/<kbd>k</kbd> move, <kbd>h</kbd>/<kbd>l</kbd> collapse/expand, <kbd>Space</kbd> toggles.</li>
+        <li><strong>Details</strong> — field summary for the selection, then a blueprint of <em>every</em> layout node. The selected element is highlighted. Click a region to select it in the tree.</li>
+        <li><strong>Footer</strong> — one adaptive key bar. Narrow terminals drop keys; they never wrap.</li>
+      </ul>
+      <p>Below 48 columns, Details hides and you get Structure only. <kbd>Tab</kbd> toggles pane focus when both panes exist.</p>
+      <p><kbd>F1</kbd> is the full key + mouse list:</p>
+      <figure>
+        <img src="images/tui-help.png" alt="F1 help overlay listing global keys, tree keys, and FormEdit keys">
+        <figcaption>Help overlay. <kbd>Esc</kbd> or <kbd>F1</kbd> closes. <kbd>j</kbd>/<kbd>k</kbd> scroll.</figcaption>
+      </figure>
+
+      <h2 id="edit">Edit, insert, select</h2>
+      <h3>FormEdit</h3>
+      <p>Select a row and press <kbd>Enter</kbd> (or double-click). Tab between fields, cycle enums with left/right, <kbd>Ctrl+S</kbd> saves, <kbd>Esc</kbd> cancels. On image URL fields, <kbd>Ctrl+P</kbd> opens a picker rooted at <code>images/</code> (it cannot walk above the template folder).</p>
+      <figure>
+        <img src="images/tui-formedit.png" alt="FormEdit modal on email-header with logo src, alt, href, and width fields">
+        <figcaption>Editing <code>email-header</code>. Dummyimage URLs in starters are valid <code>https://</code> placeholders — swap them for real assets.</figcaption>
+      </figure>
+      <h3>Insert</h3>
+      <p><kbd>/</kbd> opens a fuzzy picker filtered to kinds that are legal for the <em>current</em> selection. Nested tags stay under their MJML parent: <code>mj-navbar-link</code> only under <code>mj-navbar</code>, accordion elements only under accordion, carousel images only under carousel. A section takes columns and groups, not leaves as direct children (a leaf splices into the last column, or wraps a column on empty BODY).</p>
+      <figure>
+        <img src="images/tui-insert.png" alt="Insert picker on a column listing mj-text, mj-button, mj-navbar, mj-accordion, mj-carousel">
+        <figcaption>Picker on an <code>mj-column</code>. Type to filter, <kbd>Enter</kbd> inserts, <kbd>Esc</kbd> cancels. Navbar / accordion / carousel are column children.</figcaption>
+      </figure>
+      <h3>Blueprint click-to-select</h3>
+      <p>The details canvas always shows the full email. Click a box (or its nested text) to select that node in the tree. Innermost hit wins. The tree expands ancestors so the row is visible.</p>
+      <figure>
+        <img src="images/tui-selected.png" alt="mj-text selected in the structure tree and highlighted in the details blueprint">
+        <figcaption>A selected <code>mj-text</code> is highlighted in Structure and in the blueprint. Click the other column’s text to hop there without walking the tree.</figcaption>
+      </figure>
+      <p>Other tree edits: <kbd>d</kbd> delete (not HEAD/BRAND/BODY), <kbd>y</kbd> duplicate, <kbd>u</kbd> undo (cap 20), <kbd>J</kbd>/<kbd>K</kbd> reorder, <kbd>C</kbd>/<kbd>V</kbd> add/remove a column (equal-% widths), <kbd>c</kbd>/<kbd>v</kbd> hop columns.</p>
+      <p>Autosave rewrites <code>template.json</code> 2s after a change when a path is set. Manual <kbd>s</kbd> also writes <code>template.json.backup</code>.</p>
+
+      <h2 id="ship">Validate, preview, export</h2>
+      <table>
+        <thead>
+          <tr><th>Action</th><th>TUI</th><th>CLI</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Validate</td><td><kbd>F3</kbd></td><td><code>dd_emailforge validate &lt;dir&gt;</code></td></tr>
+          <tr><td>Preview</td><td><kbd>p</kbd></td><td><code>dd_emailforge preview &lt;dir&gt; --port 8766</code></td></tr>
+          <tr><td>Export MJML+HTML</td><td><kbd>Shift+E</kbd></td><td><code>dd_emailforge export &lt;dir&gt;</code></td></tr>
+          <tr><td>Dump JSON</td><td>—</td><td><code>dd_emailforge show &lt;dir&gt;/template.json</code></td></tr>
+        </tbody>
+      </table>
+      <p>F3 / preview / export all gate on validation <em>errors</em>. Warnings (unused font, marketing unsub heuristic) toast or print but do not block.</p>
+      <ul>
+        <li>The compiler is official Node <code>mjml</code> only. Discovery: <code>{root}/node_modules/.bin/mjml</code>, then <code>PATH</code>. Never mrml, never <code>npx</code>.</li>
+        <li>Preview rewrites relative image <code>src</code> to <code>http://127.0.0.1:{port}/images/…</code> and opens a loopback wrapper (600 + 320 iframes). CLI preview defaults to port <strong>8766</strong>; TUI preview binds <code>127.0.0.1:0</code>.</li>
+        <li>Export writes <code>template.mjml</code> + <code>template.html</code> next to the JSON (or <code>--out dir</code>). Relative images need an <code>https://</code> <code>base_url</code> on the template. Dummyimage URLs already qualify.</li>
+      </ul>
+      <pre>dd_emailforge export ./my-email
+dd_emailforge export ./my-email --out ./dist
+dd_emailforge preview ./my-email --port 8766</pre>
+
+      <h2 id="keys">Keys</h2>
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><kbd>F1</kbd></td><td>Help</td></tr>
+          <tr><td><kbd>F2</kbd></td><td>Theme source + sampled tokens</td></tr>
+          <tr><td><kbd>F3</kbd></td><td>Validate</td></tr>
+          <tr><td><kbd>p</kbd></td><td>Preview</td></tr>
+          <tr><td><kbd>Shift+E</kbd></td><td>Export</td></tr>
+          <tr><td><kbd>s</kbd></td><td>Save JSON + <code>.backup</code></td></tr>
+          <tr><td><kbd>/</kbd></td><td>Insert picker (legal kinds only)</td></tr>
+          <tr><td><kbd>Enter</kbd></td><td>FormEdit</td></tr>
+          <tr><td><kbd>Ctrl+Q</kbd></td><td>Quit (confirm if unsaved)</td></tr>
+          <tr><td><kbd>j</kbd>/<kbd>k</kbd> <kbd>g</kbd>/<kbd>G</kbd> <kbd>h</kbd>/<kbd>l</kbd> <kbd>Space</kbd></td><td>Tree move / jump / fold</td></tr>
+          <tr><td><kbd>d</kbd> <kbd>y</kbd> <kbd>u</kbd> <kbd>J</kbd>/<kbd>K</kbd></td><td>Delete / duplicate / undo / reorder</td></tr>
+          <tr><td><kbd>C</kbd>/<kbd>V</kbd> <kbd>c</kbd>/<kbd>v</kbd></td><td>Add/remove column · prev/next column</td></tr>
+          <tr><td><kbd>Ctrl+P</kbd></td><td>Image picker on src fields</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="theme">Theme</h2>
+      <p>Lookup order (first file that exists and declares <code>version: 1</code> wins):</p>
+      <ol>
+        <li><code>./dd_emailforge_theme.yml</code></li>
+        <li><code>$XDG_CONFIG_HOME/ldnddev/dd_emailforge_theme.yml</code> if <code>XDG_CONFIG_HOME</code> is set</li>
+        <li><code>~/.config/ldnddev/dd_emailforge_theme.yml</code></li>
+        <li>Built-in defaults</li>
+      </ol>
+      <p>Schema: <a href="../../LDNDDEV_TUI_VISUAL_STANDARD.md">LDNDDEV_TUI_VISUAL_STANDARD.md</a>. Do not invent tokens.</p>
+
+      <h2 id="screenshots">Updating screenshots</h2>
+      <p>The PNGs under <code>docs/tutorial/images/</code> are not hand-drawn. They are screenshots of HTML frames dumped from the live Ratatui renderer (same <code>App::draw</code> path as the TUI).</p>
+      <p><strong>From the repo root:</strong></p>
+      <pre>./docs/tutorial/capture.sh</pre>
+      <p>That will:</p>
+      <ol>
+        <li>Run the ignored test <code>tui::tutorial_shots::capture_tutorial_frames</code>, which writes one HTML frame per shot using a pinned header quote and the welcome starter (or empty chrome).</li>
+        <li>Open each frame in headless Chromium and write the PNG.</li>
+        <li>Delete the temporary <code>_frame-*.html</code> files.</li>
+      </ol>
+      <p>Requires <code>cargo</code> and a Chromium/Chrome binary on <code>PATH</code> (or set <code>CHROME</code>). Optional: <code>EMAILFORGE_TUTORIAL_SHOTS=/some/dir</code> to write somewhere else.</p>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Scene (edit <code>src/tui/tutorial_shots.rs</code> to change)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>tui-empty.png</code></td><td>No template; info toast pointing at <code>init</code></td></tr>
+          <tr><td><code>tui-welcome.png</code></td><td>Welcome starter, BODY selected, full blueprint</td></tr>
+          <tr><td><code>tui-insert.png</code></td><td><kbd>/</kbd> picker on an <code>mj-column</code></td></tr>
+          <tr><td><code>tui-formedit.png</code></td><td>FormEdit on <code>email-header</code></td></tr>
+          <tr><td><code>tui-help.png</code></td><td><kbd>F1</kbd> help overlay</td></tr>
+          <tr><td><code>tui-selected.png</code></td><td><code>mj-text</code> selected in tree + blueprint highlight</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        After a TUI visual change (chrome, blueprint, picker, forms), re-run <code>./docs/tutorial/capture.sh</code> and commit the PNGs with the code. Do not redraw these in an image editor — the capture path is the source of truth so labels stay honest. To add a shot: append a writer in <code>capture_tutorial_frames</code>, add the filename here and in this page’s <code>&lt;figure&gt;</code>, then recapture.
+      </div>
+      <p>More capture notes: <a href="README.md">docs/tutorial/README.md</a>.</p>
+
+      <h2 id="more">More docs</h2>
+      <ul>
+        <li><a href="../../Architecture.md">Architecture.md</a> — crate map, pipeline, keys</li>
+        <li><a href="../SPEC.md">docs/SPEC.md</a> — living conventions</li>
+        <li><a href="../DESIGN.md">docs/DESIGN.md</a> — locked design</li>
+        <li><a href="../../components/">components/*.md</a> — per-node field contracts</li>
+      </ul>
+    </div>
+  </main>
+  <footer class="site">
+    <div class="wrap">dd_emailforge · MIT License · screenshots from <code>docs/tutorial/capture.sh</code></div>
+  </footer>
+</body>
+</html>

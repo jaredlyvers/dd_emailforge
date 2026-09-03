@@ -136,7 +136,10 @@ impl App {
 
         let preview_dir = root.join(".preview");
         if let Err(e) = std::fs::create_dir_all(&preview_dir) {
-            self.push_toast(ToastLevel::Error, format!("Could not create .preview/: {e}"));
+            self.push_toast(
+                ToastLevel::Error,
+                format!("Could not create .preview/: {e}"),
+            );
             return;
         }
         let compiled = preview_dir.join("template.html");

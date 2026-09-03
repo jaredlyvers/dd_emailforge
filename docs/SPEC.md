@@ -8,7 +8,8 @@ Companion docs:
 - `LDNDDEV_TUI_VISUAL_STANDARD.md` — portable TUI theme + shell contract
 - `components/*.md` — per-component fields, emit rules, validation
 - `docs/DESIGN.md` — locked design (do not silently fork)
-- `README.md` — install and usage
+- `docs/tutorial/index.html` — setup / install / TUI walkthrough with screenshots
+- `README.md` — short install + link to the tutorial
 
 ---
 
@@ -61,7 +62,7 @@ Toasts: `success` / `info` / `warning` / `error`. Modals for blocking errors (lo
 
 F1 Help. F2 Theme. F3 Validate. `Shift+E` Export. `p` Preview. `s` Save. `/` insert (filtered to legal kinds). `Ctrl+Q` quit (confirm if dirty). Bare `q` never quits.
 
-FormEdit: Tab / enum cycle / Ctrl+S / Esc / click-to-focus / Ctrl+P image picker. Tree: `j/k` `g/G` `h/l` Space, `d` `y` `u`, `J/K`, `C/V` `c/v`.
+FormEdit: Tab / enum cycle / Ctrl+S / Esc / click-to-focus / Ctrl+P image picker. Tree: `j/k` `g/G` `h/l` Space, `d` `y` `u`, `J/K`, `C/V` `c/v`. Details shows a full-email ascii blueprint of every layout node; the selected element is highlighted; click a region to select it in the Structure tree.
 
 ### Starters
 

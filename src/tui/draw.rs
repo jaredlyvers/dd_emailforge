@@ -185,6 +185,28 @@ impl App {
             rows.get(self.selected_row),
             details_inner.width as usize,
         );
+        let selected_id = rows.get(self.selected_row).map(|r| r.id.clone());
+        self.details_scroll_max = text_lines
+            .len()
+            .saturating_sub(details_inner.height as usize);
+        if selected_id != self.details_sync_id {
+            self.details_sync_id = selected_id.clone();
+            if let Some(id) = &selected_id {
+                if let Some(hit) = hits.iter().find(|h| &h.id == id) {
+                    let vis = details_inner.height as usize;
+                    if vis > 0 {
+                        if hit.line < self.details_scroll {
+                            self.details_scroll = hit.line;
+                        } else if hit.line >= self.details_scroll + vis {
+                            self.details_scroll = hit.line.saturating_sub(vis.saturating_sub(1));
+                        }
+                    }
+                }
+            }
+        }
+        if self.details_scroll > self.details_scroll_max {
+            self.details_scroll = self.details_scroll_max;
+        }
         self.details_hit_areas.clear();
         for hit in &hits {
             if hit.line < self.details_scroll {
@@ -209,20 +231,10 @@ impl App {
                 hit.id.clone(),
             ));
         }
-        self.details_scroll_max = text_lines
-            .len()
-            .saturating_sub(details_inner.height as usize);
-        if self.details_scroll > self.details_scroll_max {
-            self.details_scroll = self.details_scroll_max;
-        }
         let para_lines: Vec<Line> = text_lines
             .iter()
-            .map(|l| {
-                Line::from(Span::styled(
-                    l.clone(),
-                    Style::default().fg(self.theme.text_primary),
-                ))
-            })
+            .enumerate()
+            .map(|(i, l)| style_blueprint_line(l, i, &hits, selected_id.as_ref(), &self.theme))
             .collect();
         frame.render_widget(
             Paragraph::new(para_lines)
@@ -356,6 +368,50 @@ impl App {
             }
         }
     }
+}
+
+fn style_blueprint_line<'a>(
+    line: &str,
+    line_idx: usize,
+    hits: &[super::details::DetailHit],
+    selected: Option<&super::tree::TreeId>,
+    theme: &super::theme::AppTheme,
+) -> Line<'a> {
+    let chars: Vec<char> = line.chars().collect();
+    if chars.is_empty() {
+        return Line::from("");
+    }
+    let mut spans = Vec::new();
+    let mut x = 0;
+    while x < chars.len() {
+        let selected_here = selected.is_some()
+            && hits
+                .iter()
+                .rev()
+                .any(|h| h.line == line_idx && x >= h.x0 && x < h.x1 && selected == Some(&h.id));
+        let mut x1 = x + 1;
+        while x1 < chars.len() {
+            let next_sel = selected.is_some()
+                && hits.iter().rev().any(|h| {
+                    h.line == line_idx && x1 >= h.x0 && x1 < h.x1 && selected == Some(&h.id)
+                });
+            if next_sel != selected_here {
+                break;
+            }
+            x1 += 1;
+        }
+        let text: String = chars[x..x1].iter().collect();
+        let style = if selected_here {
+            Style::default()
+                .fg(theme.text_active_focus)
+                .bg(theme.selected_background)
+        } else {
+            Style::default().fg(theme.text_primary)
+        };
+        spans.push(Span::styled(text, style));
+        x = x1;
+    }
+    Line::from(spans)
 }
 
 fn paint_scrollbar(

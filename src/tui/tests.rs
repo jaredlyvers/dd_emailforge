@@ -766,7 +766,11 @@ fn click_ascii_selects_body_node() {
     let (rect, id) = app
         .details_hit_areas
         .iter()
-        .find(|(_, id)| matches!(id, super::tree::TreeId::Path(p) if matches!(p.as_slice(), [super::tree::Step::BodyNode(_)])))
+        .rev()
+        .find(|(r, id)| {
+            r.width > 2
+                && matches!(id, super::tree::TreeId::Path(p) if matches!(p.as_slice(), [super::tree::Step::BodyNode(_)]))
+        })
         .cloned()
         .expect("body node hit");
     send_mouse(
@@ -776,6 +780,47 @@ fn click_ascii_selects_body_node() {
         rect.y,
     );
     assert_eq!(app.selected_tree_id(), Some(id));
+}
+
+#[test]
+fn click_blueprint_selects_nested_component() {
+    let mut app = app_with_one_column();
+    let col = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-column"))
+        .expect("column row");
+    app.selected_row = col;
+    app.insert_kind(super::component_kind::ComponentKind::MjText);
+    app.selected_row = 2;
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal.draw(|f| app.draw(f)).expect("draw");
+    let (rect, id) = app
+        .details_hit_areas
+        .iter()
+        .rev()
+        .find(|(_, id)| {
+            matches!(
+                id,
+                super::tree::TreeId::Path(p) if matches!(p.last(), Some(super::tree::Step::ColComp(_)))
+            )
+        })
+        .cloned()
+        .expect("component hit");
+    send_mouse(
+        &mut app,
+        MouseEventKind::Down(MouseButton::Left),
+        rect.x,
+        rect.y,
+    );
+    assert_eq!(app.selected_tree_id(), Some(id));
+    let label = app
+        .tree_rows()
+        .get(app.selected_row)
+        .map(|r| r.label.clone())
+        .unwrap_or_default();
+    assert!(label.contains("mj-text"), "{label}");
 }
 
 #[test]

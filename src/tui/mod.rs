@@ -31,10 +31,10 @@ mod draw;
 mod editform;
 mod edits;
 mod events;
-mod insert;
 mod export;
 mod form_textarea;
 mod help;
+mod insert;
 mod modals;
 mod theme;
 mod toasts;
@@ -44,6 +44,8 @@ mod util;
 pub(super) const DOUBLE_CLICK_THRESHOLD_MS: u128 = 420;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tutorial_shots;
 
 use theme::*;
 use toasts::*;
@@ -158,6 +160,7 @@ pub(super) struct App {
     undo_stack: Vec<Template>,
     form_field_areas: RefCell<Vec<(Rect, usize)>>,
     details_hit_areas: Vec<(Rect, tree::TreeId)>,
+    details_sync_id: Option<tree::TreeId>,
     paused_form_edit_modal: Option<Modal>,
 }
 
@@ -208,6 +211,7 @@ impl App {
             undo_stack: Vec::new(),
             form_field_areas: RefCell::new(Vec::new()),
             details_hit_areas: Vec::new(),
+            details_sync_id: None,
             paused_form_edit_modal: None,
         }
     }
