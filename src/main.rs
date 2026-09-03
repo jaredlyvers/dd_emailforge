@@ -82,7 +82,7 @@ fn cmd_init(dir: &PathBuf, from: StarterKind) -> ExitCode {
             println!("Created {}", dir.display());
             println!("Wrote {}", json.display());
             println!("Wrote {}", dir.join("package.json").display());
-            println!("Next: cd {} && npm install", dir.display());
+            println!("{}", starters::init_next_steps(dir));
             ExitCode::SUCCESS
         }
         Err(e) => {

@@ -16,12 +16,13 @@ Builds release, drops the binary at `$HOME/.local/bin/dd_emailforge`, installs t
 cargo build --release
 ```
 
-MJML 5 needs **Node 20+**. `init` writes a `package.json` pin (`mjml ^5.4.0`); it does not run `npm install`.
+MJML 5 needs **Node 20+**. `init` writes a `package.json` pin (`mjml ^5.4.0`); it does not run `npm install`. Skip that step if `mjml` is already on your PATH.
 
 ## Usage
 
 ```bash
 dd_emailforge init <dir> [--from welcome|newsletter|promo|transactional]
+# skip this if `mjml` is already on your PATH
 cd <dir> && npm install
 dd_emailforge tui <dir>
 dd_emailforge validate <dir>

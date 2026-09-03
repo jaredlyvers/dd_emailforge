@@ -21,7 +21,7 @@ Target: CRM / designers / developers shipping one email at a time. No campaign c
 Workflow:
 
 1. `init <dir> [--from welcome|newsletter|promo|transactional]`
-2. `cd <dir> && npm install` (official `mjml ^5.4.0`, Node 20+)
+2. `cd <dir> && npm install` if `mjml` is not already on PATH (official `mjml ^5.4.0`, Node 20+)
 3. `tui <dir>` — Structure tree + Details + FormEdit
 4. `p` preview (loopback wrapper, 600px + 320px)
 5. `export` writes `template.mjml` + `template.html` next to the JSON

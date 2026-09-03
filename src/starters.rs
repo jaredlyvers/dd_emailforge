@@ -68,6 +68,18 @@ pub fn init_template_dir(dir: &Path, kind: StarterKind) -> anyhow::Result<PathBu
     Ok(json)
 }
 
+/// Printed after a successful `init`. Local `npm install` is optional when
+/// `mjml` is already on PATH (global or otherwise).
+pub fn init_next_steps(dir: &Path) -> String {
+    format!(
+        "If mjml is already installed globally (on your PATH), you can skip npm install.\n\
+         Otherwise: cd {} && npm install\n\
+         Then: dd_emailforge tui {}",
+        dir.display(),
+        dir.display()
+    )
+}
+
 pub fn folder_slug(dir: &Path) -> String {
     let raw = dir
         .file_name()
@@ -346,6 +358,15 @@ mod tests {
         assert!(t.head.json_ld.is_empty());
         assert!(t.head.css.is_empty());
         let _ = fs::remove_dir_all(dir.parent().unwrap());
+    }
+
+    #[test]
+    fn init_next_steps_mentions_global_mjml() {
+        let msg = init_next_steps(Path::new("welcome-email"));
+        assert!(msg.contains("already installed globally"));
+        assert!(msg.contains("skip npm install"));
+        assert!(msg.contains("cd welcome-email && npm install"));
+        assert!(msg.contains("dd_emailforge tui welcome-email"));
     }
 
     #[test]
