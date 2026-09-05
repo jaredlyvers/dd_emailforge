@@ -1,8 +1,8 @@
 //! Structure tree: identity, build, expand, keyboard nav.
 use std::collections::HashSet;
 
-use super::toasts::ToastLevel;
 use super::App;
+use super::toasts::ToastLevel;
 use crate::model::{
     BodyNode, ColumnChild, MjAccordion, MjCarousel, MjColumn, MjGroup, MjHero, MjNavbar, MjSection,
     SectionChild, Template,
@@ -647,8 +647,11 @@ mod tests {
                     font_family: None,
                     color: None,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let rows = build_tree(Some(&t), &HashSet::new());
         let labels: Vec<_> = rows.iter().map(|r| r.label.as_str()).collect();

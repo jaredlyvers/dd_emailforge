@@ -1,7 +1,7 @@
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 
-use super::theme::{color_to_hex, AppTheme};
+use super::theme::{AppTheme, color_to_hex};
 
 fn wrap_to_lines(text: &str, width: usize) -> Vec<String> {
     let w = width.max(1);
@@ -207,7 +207,7 @@ pub(crate) fn build_help_text(theme: &AppTheme, width: usize) -> Text<'static> {
 
     lines.push(Line::from(Span::styled("Notes", h_style)));
     lines.push(Line::from(""));
-    let note = "Autosave rewrites template.json 2s after a change when a path is set. Manual s also writes template.json.backup. JSON-LD and CSS may be invalid while typing; F3 / export / preview require them to parse. Insert picker lists only kinds legal for the current selection. Image picker is rooted at images/ and cannot walk above the template folder.";
+    let note = "Autosave rewrites template.json 2s after a change when a path is set. Manual s also writes template.json.backup. JSON-LD and CSS may be invalid while typing; F3 / export / preview require them to parse. Insert picker lists only kinds legal for the current selection. Image picker is rooted at images/ and cannot walk above the template folder. Padding is 1-4 values with px or % (e.g. 10px or 10px 20px); bare numbers are saved as px.";
     for chunk in wrap_to_lines(note, width.saturating_sub(2)) {
         lines.push(Line::from(Span::raw(format!("  {}", chunk))));
     }

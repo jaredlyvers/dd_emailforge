@@ -18,6 +18,8 @@ pub struct FormField {
     #[allow(dead_code)]
     pub required: bool,
     pub visible_when: Option<FieldPredicate>,
+    pub hint: Option<&'static str>,
+    pub placeholder: Option<&'static str>,
 }
 
 #[derive(Debug)]
@@ -44,7 +46,6 @@ pub enum FieldKind {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum FieldPredicate {
     FieldEquals {
         other_id: &'static str,

@@ -15,7 +15,11 @@ pub enum EmitMode {
 
 pub fn emit_mjml(t: &Template, mode: EmitMode) -> anyhow::Result<String> {
     let mut w = Writer::new();
-    w.open_attrs("mjml", &[("lang", xml_escape_attr(&t.lang))]);
+    let mut mjml_attrs = vec![("lang", xml_escape_attr(&t.lang))];
+    if !t.dir.trim().is_empty() {
+        mjml_attrs.push(("dir", xml_escape_attr(&t.dir)));
+    }
+    w.open_attrs("mjml", &mjml_attrs);
     w.open("mj-head");
     w.leaf_text("mj-title", &xml_escape_text(&t.head.title));
     if !t.preheader.trim().is_empty() {
@@ -60,13 +64,12 @@ pub fn emit_mjml(t: &Template, mode: EmitMode) -> anyhow::Result<String> {
     } else {
         t.body.background_color.as_str()
     };
-    w.open_attrs(
-        "mj-body",
-        &[
-            ("background-color", xml_escape_attr(body_bg)),
-            ("width", format!("{}px", t.brand.content_width)),
-        ],
-    );
+    let mut body_attrs = vec![
+        ("background-color", xml_escape_attr(body_bg)),
+        ("width", format!("{}px", t.brand.content_width)),
+    ];
+    push_opt(&mut body_attrs, "css-class", t.body.css_class.as_deref());
+    w.open_attrs("mj-body", &body_attrs);
     if !t.preheader.trim().is_empty() {
         w.open_attrs(
             "mj-section",
@@ -192,10 +195,22 @@ fn emit_section(
         "background-color",
         s.background_color.as_deref(),
     );
-    push_opt(&mut attrs, "padding", s.padding.as_deref());
+    push_padding(&mut attrs, s.padding.as_deref());
+    push_opt(&mut attrs, "border", s.border.as_deref());
+    push_unit(&mut attrs, "border-radius", s.border_radius.as_deref());
+    push_unit(&mut attrs, "gutter", s.gutter.as_deref());
+    push_bg_url(&mut attrs, s.background_url.as_deref(), t, mode)?;
+    push_opt(&mut attrs, "background-size", s.background_size.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-repeat",
+        s.background_repeat.as_deref(),
+    );
+    push_opt(&mut attrs, "direction", s.direction.as_deref());
     if s.full_width {
         attrs.push(("full-width", "full-width".into()));
     }
+    push_opt(&mut attrs, "css-class", s.css_class.as_deref());
     w.open_attrs("mj-section", &attrs);
     for child in &s.children {
         match child {
@@ -219,10 +234,21 @@ fn emit_wrapper(
         "background-color",
         s.background_color.as_deref(),
     );
-    push_opt(&mut attrs, "padding", s.padding.as_deref());
+    push_padding(&mut attrs, s.padding.as_deref());
+    push_opt(&mut attrs, "border", s.border.as_deref());
+    push_unit(&mut attrs, "border-radius", s.border_radius.as_deref());
+    push_bg_url(&mut attrs, s.background_url.as_deref(), t, mode)?;
+    push_opt(&mut attrs, "background-size", s.background_size.as_deref());
+    push_opt(
+        &mut attrs,
+        "background-repeat",
+        s.background_repeat.as_deref(),
+    );
+    push_unit(&mut attrs, "gap", s.gap.as_deref());
     if s.full_width {
         attrs.push(("full-width", "full-width".into()));
     }
+    push_opt(&mut attrs, "css-class", s.css_class.as_deref());
     w.open_attrs("mj-wrapper", &attrs);
     for child in &s.children {
         emit_body_node(w, t, mode, child)?;
@@ -239,6 +265,9 @@ fn emit_group(w: &mut Writer, t: &Template, mode: &EmitMode, g: &MjGroup) -> any
         "background-color",
         g.background_color.as_deref(),
     );
+    push_opt(&mut attrs, "direction", g.direction.as_deref());
+    push_opt(&mut attrs, "vertical-align", g.vertical_align.as_deref());
+    push_opt(&mut attrs, "css-class", g.css_class.as_deref());
     w.open_attrs("mj-group", &attrs);
     for col in &g.children {
         emit_column(w, t, mode, col)?;
@@ -255,12 +284,22 @@ fn emit_column(w: &mut Writer, t: &Template, mode: &EmitMode, c: &MjColumn) -> a
         "background-color",
         c.background_color.as_deref(),
     );
-    push_opt(&mut attrs, "padding", c.padding.as_deref());
+    push_padding(&mut attrs, c.padding.as_deref());
     push_opt(
         &mut attrs,
         "inner-background-color",
         c.inner_background_color.as_deref(),
     );
+    push_opt(&mut attrs, "border", c.border.as_deref());
+    push_unit(&mut attrs, "border-radius", c.border_radius.as_deref());
+    push_opt(&mut attrs, "inner-border", c.inner_border.as_deref());
+    push_unit(
+        &mut attrs,
+        "inner-border-radius",
+        c.inner_border_radius.as_deref(),
+    );
+    push_opt(&mut attrs, "vertical-align", c.vertical_align.as_deref());
+    push_opt(&mut attrs, "css-class", c.css_class.as_deref());
     w.open_attrs("mj-column", &attrs);
     for child in &c.components {
         emit_column_child(w, t, mode, child)?;
@@ -299,8 +338,22 @@ fn emit_hero(w: &mut Writer, t: &Template, mode: &EmitMode, h: &MjHero) -> anyho
         "background-height",
         h.background_height.as_deref(),
     );
+    push_opt(
+        &mut attrs,
+        "background-width",
+        h.background_width.as_deref(),
+    );
+    push_opt(
+        &mut attrs,
+        "background-position",
+        h.background_position.as_deref(),
+    );
     push_opt(&mut attrs, "width", h.width.as_deref());
     push_opt(&mut attrs, "height", h.height.as_deref());
+    push_padding(&mut attrs, h.padding.as_deref());
+    push_unit(&mut attrs, "border-radius", h.border_radius.as_deref());
+    push_opt(&mut attrs, "vertical-align", h.vertical_align.as_deref());
+    push_opt(&mut attrs, "css-class", h.css_class.as_deref());
     w.open_attrs("mj-hero", &attrs);
     for child in &h.children {
         emit_column_child(w, t, mode, child)?;
@@ -334,8 +387,16 @@ fn emit_text(w: &mut Writer, n: &MjText) -> anyhow::Result<()> {
     push_align(&mut attrs, n.align);
     push_opt(&mut attrs, "font-size", n.font_size.as_deref());
     push_opt(&mut attrs, "font-family", n.font_family.as_deref());
+    push_opt(&mut attrs, "font-weight", n.font_weight.as_deref());
+    push_opt(&mut attrs, "font-style", n.font_style.as_deref());
+    push_opt(&mut attrs, "line-height", n.line_height.as_deref());
     push_opt(&mut attrs, "color", n.color.as_deref());
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "letter-spacing", n.letter_spacing.as_deref());
+    push_opt(&mut attrs, "text-decoration", n.text_decoration.as_deref());
+    push_opt(&mut attrs, "text-transform", n.text_transform.as_deref());
+    push_opt(&mut attrs, "height", n.height.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-text", &attrs);
     w.raw_indented(&emit_text_inner(&n.content));
     w.close("mj-text");
@@ -352,9 +413,23 @@ fn emit_button(w: &mut Writer, n: &MjButton) -> anyhow::Result<()> {
     push_opt(&mut attrs, "color", n.color.as_deref());
     push_align(&mut attrs, n.align);
     push_opt(&mut attrs, "font-family", n.font_family.as_deref());
-    push_opt(&mut attrs, "border-radius", n.border_radius.as_deref());
+    push_opt(&mut attrs, "font-size", n.font_size.as_deref());
+    push_opt(&mut attrs, "font-weight", n.font_weight.as_deref());
+    push_opt(&mut attrs, "font-style", n.font_style.as_deref());
+    push_opt(&mut attrs, "border", n.border.as_deref());
+    push_unit(&mut attrs, "border-radius", n.border_radius.as_deref());
+    push_padding_named(&mut attrs, "inner-padding", n.inner_padding.as_deref());
     push_opt(&mut attrs, "width", n.width.as_deref());
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_opt(&mut attrs, "height", n.height.as_deref());
+    push_opt(&mut attrs, "target", n.target.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "letter-spacing", n.letter_spacing.as_deref());
+    push_opt(&mut attrs, "line-height", n.line_height.as_deref());
+    push_opt(&mut attrs, "text-decoration", n.text_decoration.as_deref());
+    push_opt(&mut attrs, "text-transform", n.text_transform.as_deref());
+    push_opt(&mut attrs, "rel", n.rel.as_deref());
+    push_opt(&mut attrs, "title", n.title.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-button", &attrs);
     w.raw_indented(&xml_escape_text(&n.content));
     w.close("mj-button");
@@ -371,11 +446,18 @@ fn emit_image(w: &mut Writer, t: &Template, mode: &EmitMode, n: &MjImage) -> any
         attrs.push(("href", xml_escape_attr(href)));
     }
     push_opt(&mut attrs, "width", n.width.as_deref());
+    push_opt(&mut attrs, "height", n.height.as_deref());
     push_align(&mut attrs, n.align);
     if n.fluid_on_mobile {
         attrs.push(("fluid-on-mobile", "true".into()));
     }
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_opt(&mut attrs, "border", n.border.as_deref());
+    push_unit(&mut attrs, "border-radius", n.border_radius.as_deref());
+    push_opt(&mut attrs, "title", n.title.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "target", n.target.as_deref());
+    push_opt(&mut attrs, "rel", n.rel.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.self_close("mj-image", &attrs);
     Ok(())
 }
@@ -384,13 +466,20 @@ fn emit_divider(w: &mut Writer, n: &MjDivider) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_opt(&mut attrs, "border-color", n.border_color.as_deref());
     push_opt(&mut attrs, "border-width", n.border_width.as_deref());
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_opt(&mut attrs, "border-style", n.border_style.as_deref());
+    push_opt(&mut attrs, "width", n.width.as_deref());
+    push_align(&mut attrs, n.align);
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.self_close("mj-divider", &attrs);
     Ok(())
 }
 
 fn emit_spacer(w: &mut Writer, n: &MjSpacer) -> anyhow::Result<()> {
-    w.self_close("mj-spacer", &[("height", xml_escape_attr(&n.height))]);
+    let mut attrs = vec![("height", xml_escape_attr(&n.height))];
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
+    w.self_close("mj-spacer", &attrs);
     Ok(())
 }
 
@@ -407,6 +496,13 @@ fn emit_social(w: &mut Writer, n: &MjSocial) -> anyhow::Result<()> {
     if !n.icon_size.trim().is_empty() {
         attrs.push(("icon-size", xml_escape_attr(&n.icon_size)));
     }
+    push_unit(&mut attrs, "border-radius", n.border_radius.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_padding_named(&mut attrs, "icon-padding", n.icon_padding.as_deref());
+    push_padding_named(&mut attrs, "inner-padding", n.inner_padding.as_deref());
+    push_opt(&mut attrs, "font-size", n.font_size.as_deref());
+    push_opt(&mut attrs, "color", n.color.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-social", &attrs);
     for el in &n.elements {
         emit_social_element(w, el);
@@ -423,6 +519,15 @@ fn emit_social_element(w: &mut Writer, el: &MjSocialElement) {
     if let Some(src) = el.src.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         attrs.push(("src", xml_escape_attr(src)));
     }
+    push_opt(
+        &mut attrs,
+        "background-color",
+        el.background_color.as_deref(),
+    );
+    push_padding(&mut attrs, el.padding.as_deref());
+    push_opt(&mut attrs, "icon-size", el.icon_size.as_deref());
+    push_opt(&mut attrs, "alt", el.alt.as_deref());
+    push_opt(&mut attrs, "css-class", el.css_class.as_deref());
     w.self_close("mj-social-element", &attrs);
 }
 
@@ -435,6 +540,16 @@ fn social_network_mjml(n: SocialNetwork) -> &'static str {
         SocialNetwork::X => "twitter",
         SocialNetwork::Github => "github",
         SocialNetwork::Web => "web",
+        SocialNetwork::Youtube => "youtube",
+        SocialNetwork::Pinterest => "pinterest",
+        SocialNetwork::Google => "google",
+        SocialNetwork::Tumblr => "tumblr",
+        SocialNetwork::Snapchat => "snapchat",
+        SocialNetwork::Vimeo => "vimeo",
+        SocialNetwork::Medium => "medium",
+        SocialNetwork::Soundcloud => "soundcloud",
+        SocialNetwork::Dribbble => "dribbble",
+        SocialNetwork::Xing => "xing",
     }
 }
 
@@ -446,7 +561,15 @@ fn emit_navbar(w: &mut Writer, n: &MjNavbar) -> anyhow::Result<()> {
     push_opt(&mut attrs, "ico-color", n.ico_color.as_deref());
     push_opt(&mut attrs, "base-url", n.base_url.as_deref());
     push_align(&mut attrs, n.align);
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    if n.hamburger {
+        push_opt(&mut attrs, "ico-align", n.ico_align.as_deref());
+        push_opt(&mut attrs, "ico-font-size", n.ico_font_size.as_deref());
+        push_padding_named(&mut attrs, "ico-padding", n.ico_padding.as_deref());
+        push_opt(&mut attrs, "ico-open", n.ico_open.as_deref());
+        push_opt(&mut attrs, "ico-close", n.ico_close.as_deref());
+    }
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-navbar", &attrs);
     for link in &n.links {
         emit_navbar_link(w, link);
@@ -458,7 +581,13 @@ fn emit_navbar(w: &mut Writer, n: &MjNavbar) -> anyhow::Result<()> {
 fn emit_navbar_link(w: &mut Writer, n: &MjNavbarLink) {
     let mut attrs = vec![("href", xml_escape_attr(&n.href))];
     push_opt(&mut attrs, "color", n.color.as_deref());
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_opt(&mut attrs, "font-family", n.font_family.as_deref());
+    push_opt(&mut attrs, "font-size", n.font_size.as_deref());
+    push_opt(&mut attrs, "font-weight", n.font_weight.as_deref());
+    push_opt(&mut attrs, "text-decoration", n.text_decoration.as_deref());
+    push_opt(&mut attrs, "text-transform", n.text_transform.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-navbar-link", &attrs);
     w.raw_indented(&xml_escape_text(&n.content));
     w.close("mj-navbar-link");
@@ -467,7 +596,22 @@ fn emit_navbar_link(w: &mut Writer, n: &MjNavbarLink) {
 fn emit_accordion(w: &mut Writer, n: &MjAccordion) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_opt(&mut attrs, "border", n.border.as_deref());
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "font-family", n.font_family.as_deref());
+    push_opt(&mut attrs, "icon-position", n.icon_position.as_deref());
+    push_opt(&mut attrs, "icon-width", n.icon_width.as_deref());
+    push_opt(&mut attrs, "icon-height", n.icon_height.as_deref());
+    push_opt(
+        &mut attrs,
+        "icon-wrapped-url",
+        n.icon_wrapped_url.as_deref(),
+    );
+    push_opt(
+        &mut attrs,
+        "icon-unwrapped-url",
+        n.icon_unwrapped_url.as_deref(),
+    );
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-accordion", &attrs);
     for el in &n.elements {
         emit_accordion_element(w, el);
@@ -483,6 +627,7 @@ fn emit_accordion_element(w: &mut Writer, n: &MjAccordionElement) {
         "background-color",
         n.background_color.as_deref(),
     );
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-accordion-element", &attrs);
     w.open("mj-accordion-title");
     w.raw_indented(&xml_escape_text(&n.title));
@@ -501,7 +646,15 @@ fn emit_carousel(
 ) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_align(&mut attrs, n.align);
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_unit(&mut attrs, "border-radius", n.border_radius.as_deref());
+    push_unit(
+        &mut attrs,
+        "tb-border-radius",
+        n.tb_border_radius.as_deref(),
+    );
+    push_opt(&mut attrs, "icon-width", n.icon_width.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     attrs.push((
         "thumbnails",
         match n.thumbnails {
@@ -544,6 +697,8 @@ fn emit_carousel_image(
             xml_escape_attr(&rewrite_src(thumb, t, mode)?),
         ));
     }
+    push_unit(&mut attrs, "border-radius", n.border_radius.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.self_close("mj-carousel-image", &attrs);
     Ok(())
 }
@@ -551,8 +706,17 @@ fn emit_carousel_image(
 fn emit_table(w: &mut Writer, n: &MjTable) -> anyhow::Result<()> {
     let mut attrs = Vec::new();
     push_opt(&mut attrs, "font-size", n.font_size.as_deref());
+    push_opt(&mut attrs, "font-family", n.font_family.as_deref());
+    push_opt(&mut attrs, "line-height", n.line_height.as_deref());
     push_opt(&mut attrs, "color", n.color.as_deref());
-    push_opt(&mut attrs, "padding", n.padding.as_deref());
+    push_align(&mut attrs, n.align);
+    push_opt(&mut attrs, "width", n.width.as_deref());
+    push_opt(&mut attrs, "border", n.border.as_deref());
+    push_padding(&mut attrs, n.padding.as_deref());
+    push_opt(&mut attrs, "cellpadding", n.cellpadding.as_deref());
+    push_opt(&mut attrs, "cellspacing", n.cellspacing.as_deref());
+    push_opt(&mut attrs, "role", n.role.as_deref());
+    push_opt(&mut attrs, "css-class", n.css_class.as_deref());
     w.open_attrs("mj-table", &attrs);
     let inner = if contains_ci(&n.content, "</mj-") {
         xml_escape_text(&n.content)
@@ -826,6 +990,45 @@ fn push_opt(attrs: &mut Vec<(&'static str, String)>, key: &'static str, value: O
     }
 }
 
+fn push_padding(attrs: &mut Vec<(&'static str, String)>, value: Option<&str>) {
+    push_padding_named(attrs, "padding", value);
+}
+
+fn push_padding_named(
+    attrs: &mut Vec<(&'static str, String)>,
+    key: &'static str,
+    value: Option<&str>,
+) {
+    if let Some(v) = value.map(str::trim).filter(|s| !s.is_empty()) {
+        let out = crate::padding::normalize_padding(v).unwrap_or_else(|_| v.to_string());
+        attrs.push((key, xml_escape_attr(&out)));
+    }
+}
+
+fn push_bg_url(
+    attrs: &mut Vec<(&'static str, String)>,
+    url: Option<&str>,
+    t: &Template,
+    mode: &EmitMode,
+) -> anyhow::Result<()> {
+    if let Some(url) = url.map(str::trim).filter(|s| !s.is_empty()) {
+        attrs.push((
+            "background-url",
+            xml_escape_attr(&rewrite_src(url, t, mode)?),
+        ));
+    }
+    Ok(())
+}
+
+fn push_unit(attrs: &mut Vec<(&'static str, String)>, key: &'static str, value: Option<&str>) {
+    if let Some(v) = value.map(str::trim).filter(|s| !s.is_empty()) {
+        let out = crate::padding::normalize_padding(v)
+            .or_else(|_| crate::padding::normalize_unit(v))
+            .unwrap_or_else(|_| v.to_string());
+        attrs.push((key, xml_escape_attr(&out)));
+    }
+}
+
 fn push_align(attrs: &mut Vec<(&'static str, String)>, align: Option<Align>) {
     if let Some(a) = align {
         attrs.push((
@@ -973,11 +1176,7 @@ fn try_allowlisted(s: &str) -> Option<String> {
             rest = &rest[next..];
         }
     }
-    if stack.is_empty() {
-        Some(out)
-    } else {
-        None
-    }
+    if stack.is_empty() { Some(out) } else { None }
 }
 
 fn split_name_attrs(body: &str) -> Option<(String, Option<String>)> {
@@ -1171,6 +1370,190 @@ mod tests {
     }
 
     #[test]
+    fn unitless_padding_emits_px() {
+        let mut t = Template::minimal();
+        t.preheader.clear();
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            background_color: None,
+            padding: None,
+            full_width: false,
+            children: vec![SectionChild::MjColumn(MjColumn {
+                width: None,
+                background_color: None,
+                padding: Some("12 10 12 10".into()),
+                inner_background_color: None,
+                components: vec![ColumnChild::MjText(MjText {
+                    content: "Hi".into(),
+                    align: None,
+                    font_size: None,
+                    font_family: None,
+                    color: None,
+                    padding: Some("2".into()),
+                    ..Default::default()
+                })],
+                ..Default::default()
+            })],
+            ..Default::default()
+        }));
+        let mjml = export(&t);
+        assert!(mjml.contains(r#"padding="12px 10px 12px 10px""#), "{mjml}");
+        assert!(mjml.contains(r#"padding="2px""#), "{mjml}");
+        assert!(!mjml.contains(r#"padding="12 10 12 10""#), "{mjml}");
+        assert!(!mjml.contains(r#"padding="2""#), "{mjml}");
+    }
+
+    #[test]
+    fn p0_chrome_attrs_emit_when_set() {
+        let mut t = Template::minimal();
+        t.preheader.clear();
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            border: Some("1px solid #000".into()),
+            border_radius: Some("8px".into()),
+            children: vec![SectionChild::MjColumn(MjColumn {
+                border_radius: Some("4px".into()),
+                components: vec![
+                    ColumnChild::MjText(MjText {
+                        content: "Hi".into(),
+                        font_weight: Some("bold".into()),
+                        font_style: Some("italic".into()),
+                        line_height: Some("1.5".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjButton(MjButton {
+                        content: "Go".into(),
+                        href: "https://example.com".into(),
+                        inner_padding: Some("8px 16px".into()),
+                        font_size: Some("14px".into()),
+                        border: Some("1px solid #333".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjImage(MjImage {
+                        src: "https://example.com/a.png".into(),
+                        alt: "A".into(),
+                        border_radius: Some("6px".into()),
+                        height: Some("120px".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjDivider(crate::model::MjDivider {
+                        border_style: Some("dashed".into()),
+                        width: Some("80%".into()),
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            })],
+            ..Default::default()
+        }));
+        let mjml = export(&t);
+        assert!(mjml.contains(r#"border="1px solid #000""#), "{mjml}");
+        assert!(mjml.contains(r#"border-radius="8px""#), "{mjml}");
+        assert!(mjml.contains(r#"border-radius="4px""#), "{mjml}");
+        assert!(mjml.contains(r#"font-weight="bold""#), "{mjml}");
+        assert!(mjml.contains(r#"font-style="italic""#), "{mjml}");
+        assert!(mjml.contains(r#"inner-padding="8px 16px""#), "{mjml}");
+        assert!(mjml.contains(r#"border-style="dashed""#), "{mjml}");
+        assert!(mjml.contains(r#"height="120px""#), "{mjml}");
+    }
+
+    #[test]
+    fn p1_layout_attrs_emit_when_set() {
+        let mut t = Template::minimal();
+        t.preheader.clear();
+        t.dir = "rtl".into();
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            gutter: Some("4%".into()),
+            background_url: Some("https://example.com/bg.png".into()),
+            background_size: Some("cover".into()),
+            background_repeat: Some("no-repeat".into()),
+            direction: Some("rtl".into()),
+            children: vec![SectionChild::MjColumn(MjColumn {
+                vertical_align: Some("middle".into()),
+                components: vec![
+                    ColumnChild::MjButton(crate::model::MjButton {
+                        content: "Go".into(),
+                        href: "https://example.com".into(),
+                        target: Some("_blank".into()),
+                        height: Some("44px".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjImage(crate::model::MjImage {
+                        src: "https://example.com/a.png".into(),
+                        alt: "A".into(),
+                        title: Some("Photo".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjSocial(crate::model::MjSocial {
+                        icon_padding: Some("4px".into()),
+                        color: Some("#333333".into()),
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            })],
+            ..Default::default()
+        }));
+        let mjml = export(&t);
+        assert!(mjml.contains(r#"dir="rtl""#), "{mjml}");
+        assert!(mjml.contains(r#"gutter="4%""#), "{mjml}");
+        assert!(
+            mjml.contains(r#"background-url="https://example.com/bg.png""#),
+            "{mjml}"
+        );
+        assert!(mjml.contains(r#"background-size="cover""#), "{mjml}");
+        assert!(mjml.contains(r#"direction="rtl""#), "{mjml}");
+        assert!(mjml.contains(r#"vertical-align="middle""#), "{mjml}");
+        assert!(mjml.contains(r#"target="_blank""#), "{mjml}");
+        assert!(mjml.contains(r#"title="Photo""#), "{mjml}");
+        assert!(mjml.contains(r#"icon-padding="4px""#), "{mjml}");
+    }
+
+    #[test]
+    fn p2_completeness_attrs_emit_when_set() {
+        let mut t = Template::minimal();
+        t.preheader.clear();
+        t.body.css_class = Some("shell".into());
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            css_class: Some("hero-row".into()),
+            children: vec![SectionChild::MjColumn(MjColumn {
+                css_class: Some("col".into()),
+                components: vec![
+                    ColumnChild::MjText(MjText {
+                        content: "Hi".into(),
+                        letter_spacing: Some("0.5px".into()),
+                        text_transform: Some("uppercase".into()),
+                        css_class: Some("lede".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjButton(crate::model::MjButton {
+                        content: "Go".into(),
+                        href: "https://example.com".into(),
+                        rel: Some("noopener".into()),
+                        title: Some("Open".into()),
+                        css_class: Some("cta".into()),
+                        ..Default::default()
+                    }),
+                    ColumnChild::MjTable(MjTable {
+                        content: "<table><tr><td>1</td></tr></table>".into(),
+                        cellpadding: Some("4".into()),
+                        role: Some("presentation".into()),
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            })],
+            ..Default::default()
+        }));
+        let mjml = export(&t);
+        assert!(mjml.contains(r#"css-class="shell""#), "{mjml}");
+        assert!(mjml.contains(r#"css-class="hero-row""#), "{mjml}");
+        assert!(mjml.contains(r#"letter-spacing="0.5px""#), "{mjml}");
+        assert!(mjml.contains(r#"text-transform="uppercase""#), "{mjml}");
+        assert!(mjml.contains(r#"rel="noopener""#), "{mjml}");
+        assert!(mjml.contains(r#"cellpadding="4""#), "{mjml}");
+        assert!(mjml.contains(r#"role="presentation""#), "{mjml}");
+    }
+
+    #[test]
     fn text_escaping_and_allowlist() {
         assert_eq!(emit_text_inner("Hello & Co"), "Hello &amp; Co");
         assert_eq!(emit_text_inner("<b>Hi</b>"), "<b>Hi</b>");
@@ -1200,8 +1583,11 @@ mod tests {
                     font_family: None,
                     color: None,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let mjml = export(&t);
         assert_eq!(mjml.matches("</mj-text>").count(), 1);
@@ -1243,9 +1629,13 @@ mod tests {
                         name: SocialNetwork::X,
                         href: "https://x.com/acme".into(),
                         src: None,
+                        ..Default::default()
                     }],
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let mjml = export(&t);
         assert!(mjml.contains("name=\"twitter\""));
@@ -1340,8 +1730,11 @@ mod tests {
                     align: None,
                     padding: None,
                     links: vec![],
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let mjml = export(&t);
         assert!(mjml.contains("<mj-navbar"));
@@ -1408,15 +1801,18 @@ mod tests {
                                     border_color: None,
                                     border_width: None,
                                     padding: None,
+                                    ..Default::default()
                                 }),
                                 ColumnChild::MjSpacer(crate::model::MjSpacer {
                                     height: "24px".into(),
+                                    ..Default::default()
                                 }),
                                 ColumnChild::MjTable(MjTable {
                                     content: "<table><tr><td>1</td></tr></table>".into(),
                                     font_size: None,
                                     color: None,
                                     padding: None,
+                                    ..Default::default()
                                 }),
                                 ColumnChild::MjNavbar(crate::model::MjNavbar {
                                     hamburger: true,
@@ -1429,7 +1825,9 @@ mod tests {
                                         content: "Home".into(),
                                         color: None,
                                         padding: None,
+                                        ..Default::default()
                                     }],
+                                    ..Default::default()
                                 }),
                                 ColumnChild::MjAccordion(crate::model::MjAccordion {
                                     border: None,
@@ -1438,11 +1836,14 @@ mod tests {
                                         title: "Why?".into(),
                                         content: "Because.".into(),
                                         background_color: None,
+                                        ..Default::default()
                                     }],
+                                    ..Default::default()
                                 }),
                                 ColumnChild::MjCarousel(crate::model::MjCarousel {
                                     align: None,
                                     padding: None,
+                                    border_radius: None,
                                     thumbnails: crate::model::Thumbnails::Hidden,
                                     images: vec![crate::model::MjCarouselImage {
                                         src: "https://cdn.example.com/slide.png".into(),
@@ -1451,12 +1852,18 @@ mod tests {
                                         thumbnails_src: Some(
                                             "https://cdn.example.com/thumb.png".into(),
                                         ),
+                                        ..Default::default()
                                     }],
+                                    ..Default::default()
                                 }),
                             ],
+                            ..Default::default()
                         }],
+                        ..Default::default()
                     })],
+                    ..Default::default()
                 })],
+                ..Default::default()
             }),
             BodyNode::MjHero(MjHero {
                 mode: HeroMode::FluidHeight,
@@ -1472,7 +1879,9 @@ mod tests {
                     font_family: None,
                     color: None,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             }),
             BodyNode::EmailFooter(EmailFooter {
                 company_name: "Acme".into(),
@@ -1483,6 +1892,7 @@ mod tests {
                     name: SocialNetwork::X,
                     href: "https://x.com/acme".into(),
                     src: None,
+                    ..Default::default()
                 }],
                 copyright: Some("© Acme".into()),
             }),

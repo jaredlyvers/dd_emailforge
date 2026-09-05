@@ -1,5 +1,5 @@
 //! Populate FormEdit from a tree selection and write it back on Ctrl+S.
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 
 use crate::model::{
     Align, BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
@@ -34,6 +34,7 @@ fn head_to_form(t: &Template) -> EditFormState {
     s.set("subject", t.subject.clone());
     s.set("preheader", t.preheader.clone());
     s.set("lang", t.lang.clone());
+    s.set("dir", t.dir.clone());
     s.set("title", t.head.title.clone());
     s.set("breakpoint", t.head.breakpoint.clone());
     s.set("base_url", t.base_url.clone());
@@ -56,6 +57,7 @@ fn apply_head(t: &mut Template, state: &EditFormState) -> Result<()> {
     t.subject = state.get("subject").to_string();
     t.preheader = state.get("preheader").to_string();
     t.lang = state.get("lang").to_string();
+    t.dir = state.get("dir").trim().to_string();
     t.head.title = state.get("title").to_string();
     t.head.breakpoint = state.get("breakpoint").to_string();
     t.base_url = state.get("base_url").to_string();
@@ -102,11 +104,13 @@ fn apply_brand(t: &mut Template, state: &EditFormState) -> Result<()> {
 fn body_to_form(t: &Template) -> EditFormState {
     let mut s = EditFormState::new(&editform::BODY_FORM);
     s.set("background_color", t.body.background_color.clone());
+    s.set("css_class", opt_get(&t.body.css_class));
     s
 }
 
 fn apply_body(t: &mut Template, state: &EditFormState) -> Result<()> {
     t.body.background_color = state.get("background_color").trim().to_string();
+    t.body.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -326,15 +330,30 @@ fn body_node_to_form(n: &BodyNode) -> EditFormState {
         BodyNode::MjSection(s) => {
             let mut st = EditFormState::new(&editform::SECTION_FORM);
             st.set("background_color", opt_get(&s.background_color));
+            st.set("background_url", opt_get(&s.background_url));
+            st.set("background_size", opt_get(&s.background_size));
+            st.set("background_repeat", opt_get(&s.background_repeat));
             st.set("padding", opt_get(&s.padding));
+            st.set("gutter", opt_get(&s.gutter));
+            st.set("direction", opt_get(&s.direction));
+            st.set("border", opt_get(&s.border));
+            st.set("border_radius", opt_get(&s.border_radius));
             st.set("full_width", bool_str(s.full_width));
+            st.set("css_class", opt_get(&s.css_class));
             st
         }
         BodyNode::MjWrapper(w) => {
             let mut st = EditFormState::new(&editform::WRAPPER_FORM);
             st.set("background_color", opt_get(&w.background_color));
+            st.set("background_url", opt_get(&w.background_url));
+            st.set("background_size", opt_get(&w.background_size));
+            st.set("background_repeat", opt_get(&w.background_repeat));
             st.set("padding", opt_get(&w.padding));
+            st.set("gap", opt_get(&w.gap));
+            st.set("border", opt_get(&w.border));
+            st.set("border_radius", opt_get(&w.border_radius));
             st.set("full_width", bool_str(w.full_width));
+            st.set("css_class", opt_get(&w.css_class));
             st
         }
         BodyNode::MjHero(h) => hero_to_form(h),
@@ -350,14 +369,29 @@ fn apply_body_node(n: &mut BodyNode, state: &EditFormState) -> Result<()> {
     match n {
         BodyNode::MjSection(s) => {
             s.background_color = opt_set(state, "background_color");
-            s.padding = opt_set(state, "padding");
+            s.background_url = opt_set(state, "background_url");
+            s.background_size = opt_set(state, "background_size");
+            s.background_repeat = opt_set(state, "background_repeat");
+            s.padding = opt_set_padding(state)?;
+            s.gutter = opt_set_unit(state, "gutter")?;
+            s.direction = opt_set(state, "direction");
+            s.border = opt_set(state, "border");
+            s.border_radius = opt_set_unit(state, "border_radius")?;
             s.full_width = parse_bool(state.get("full_width"))?;
+            s.css_class = opt_set(state, "css_class");
             Ok(())
         }
         BodyNode::MjWrapper(w) => {
             w.background_color = opt_set(state, "background_color");
-            w.padding = opt_set(state, "padding");
+            w.background_url = opt_set(state, "background_url");
+            w.background_size = opt_set(state, "background_size");
+            w.background_repeat = opt_set(state, "background_repeat");
+            w.padding = opt_set_padding(state)?;
+            w.gap = opt_set_unit(state, "gap")?;
+            w.border = opt_set(state, "border");
+            w.border_radius = opt_set_unit(state, "border_radius")?;
             w.full_width = parse_bool(state.get("full_width"))?;
+            w.css_class = opt_set(state, "css_class");
             Ok(())
         }
         BodyNode::MjHero(h) => apply_hero(h, state),
@@ -375,14 +409,26 @@ fn column_to_form(c: &MjColumn) -> EditFormState {
     st.set("background_color", opt_get(&c.background_color));
     st.set("padding", opt_get(&c.padding));
     st.set("inner_background_color", opt_get(&c.inner_background_color));
+    st.set("border", opt_get(&c.border));
+    st.set("border_radius", opt_get(&c.border_radius));
+    st.set("inner_border", opt_get(&c.inner_border));
+    st.set("inner_border_radius", opt_get(&c.inner_border_radius));
+    st.set("vertical_align", opt_get(&c.vertical_align));
+    st.set("css_class", opt_get(&c.css_class));
     st
 }
 
 fn apply_column(c: &mut MjColumn, state: &EditFormState) -> Result<()> {
     c.width = opt_set(state, "width");
     c.background_color = opt_set(state, "background_color");
-    c.padding = opt_set(state, "padding");
+    c.padding = opt_set_padding(state)?;
     c.inner_background_color = opt_set(state, "inner_background_color");
+    c.border = opt_set(state, "border");
+    c.border_radius = opt_set_unit(state, "border_radius")?;
+    c.inner_border = opt_set(state, "inner_border");
+    c.inner_border_radius = opt_set_unit(state, "inner_border_radius")?;
+    c.vertical_align = opt_set(state, "vertical_align");
+    c.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -390,12 +436,18 @@ fn group_to_form(g: &MjGroup) -> EditFormState {
     let mut st = EditFormState::new(&editform::GROUP_FORM);
     st.set("width", opt_get(&g.width));
     st.set("background_color", opt_get(&g.background_color));
+    st.set("direction", opt_get(&g.direction));
+    st.set("vertical_align", opt_get(&g.vertical_align));
+    st.set("css_class", opt_get(&g.css_class));
     st
 }
 
 fn apply_group(g: &mut MjGroup, state: &EditFormState) -> Result<()> {
     g.width = opt_set(state, "width");
     g.background_color = opt_set(state, "background_color");
+    g.direction = opt_set(state, "direction");
+    g.vertical_align = opt_set(state, "vertical_align");
+    g.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -405,8 +457,14 @@ fn hero_to_form(h: &MjHero) -> EditFormState {
     st.set("background_url", opt_get(&h.background_url));
     st.set("background_color", opt_get(&h.background_color));
     st.set("background_height", opt_get(&h.background_height));
+    st.set("background_width", opt_get(&h.background_width));
+    st.set("background_position", opt_get(&h.background_position));
     st.set("width", opt_get(&h.width));
     st.set("height", opt_get(&h.height));
+    st.set("padding", opt_get(&h.padding));
+    st.set("border_radius", opt_get(&h.border_radius));
+    st.set("vertical_align", opt_get(&h.vertical_align));
+    st.set("css_class", opt_get(&h.css_class));
     st
 }
 
@@ -415,8 +473,14 @@ fn apply_hero(h: &mut MjHero, state: &EditFormState) -> Result<()> {
     h.background_url = opt_set(state, "background_url");
     h.background_color = opt_set(state, "background_color");
     h.background_height = opt_set(state, "background_height");
+    h.background_width = opt_set(state, "background_width");
+    h.background_position = opt_set(state, "background_position");
     h.width = opt_set(state, "width");
     h.height = opt_set(state, "height");
+    h.padding = opt_set_padding(state)?;
+    h.border_radius = opt_set_unit(state, "border_radius")?;
+    h.vertical_align = opt_set(state, "vertical_align");
+    h.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -428,8 +492,16 @@ fn leaf_to_form(c: &ColumnChild) -> EditFormState {
             st.set("align", align_str(t.align));
             st.set("font_size", opt_get(&t.font_size));
             st.set("font_family", opt_get(&t.font_family));
+            st.set("font_weight", opt_get(&t.font_weight));
+            st.set("font_style", opt_get(&t.font_style));
+            st.set("line_height", opt_get(&t.line_height));
             st.set("color", opt_get(&t.color));
             st.set("padding", opt_get(&t.padding));
+            st.set("letter_spacing", opt_get(&t.letter_spacing));
+            st.set("text_decoration", opt_get(&t.text_decoration));
+            st.set("text_transform", opt_get(&t.text_transform));
+            st.set("height", opt_get(&t.height));
+            st.set("css_class", opt_get(&t.css_class));
             st
         }
         ColumnChild::MjButton(b) => {
@@ -440,9 +512,23 @@ fn leaf_to_form(c: &ColumnChild) -> EditFormState {
             st.set("color", opt_get(&b.color));
             st.set("align", align_str(b.align));
             st.set("font_family", opt_get(&b.font_family));
+            st.set("font_size", opt_get(&b.font_size));
+            st.set("font_weight", opt_get(&b.font_weight));
+            st.set("font_style", opt_get(&b.font_style));
+            st.set("border", opt_get(&b.border));
             st.set("border_radius", opt_get(&b.border_radius));
+            st.set("inner_padding", opt_get(&b.inner_padding));
             st.set("width", opt_get(&b.width));
+            st.set("height", opt_get(&b.height));
+            st.set("target", opt_get(&b.target));
             st.set("padding", opt_get(&b.padding));
+            st.set("letter_spacing", opt_get(&b.letter_spacing));
+            st.set("line_height", opt_get(&b.line_height));
+            st.set("text_decoration", opt_get(&b.text_decoration));
+            st.set("text_transform", opt_get(&b.text_transform));
+            st.set("rel", opt_get(&b.rel));
+            st.set("title", opt_get(&b.title));
+            st.set("css_class", opt_get(&b.css_class));
             st
         }
         ColumnChild::MjImage(i) => {
@@ -450,22 +536,35 @@ fn leaf_to_form(c: &ColumnChild) -> EditFormState {
             st.set("src", i.src.clone());
             st.set("alt", i.alt.clone());
             st.set("href", opt_get(&i.href));
+            st.set("title", opt_get(&i.title));
             st.set("width", opt_get(&i.width));
+            st.set("height", opt_get(&i.height));
             st.set("align", align_str(i.align));
             st.set("fluid_on_mobile", bool_str(i.fluid_on_mobile));
+            st.set("border", opt_get(&i.border));
+            st.set("border_radius", opt_get(&i.border_radius));
             st.set("padding", opt_get(&i.padding));
+            st.set("target", opt_get(&i.target));
+            st.set("rel", opt_get(&i.rel));
+            st.set("css_class", opt_get(&i.css_class));
             st
         }
         ColumnChild::MjDivider(d) => {
             let mut st = EditFormState::new(&editform::DIVIDER_FORM);
             st.set("border_color", opt_get(&d.border_color));
             st.set("border_width", opt_get(&d.border_width));
+            st.set("border_style", opt_get(&d.border_style));
+            st.set("width", opt_get(&d.width));
+            st.set("align", align_str(d.align));
             st.set("padding", opt_get(&d.padding));
+            st.set("css_class", opt_get(&d.css_class));
             st
         }
         ColumnChild::MjSpacer(s) => {
             let mut st = EditFormState::new(&editform::SPACER_FORM);
             st.set("height", s.height.clone());
+            st.set("padding", opt_get(&s.padding));
+            st.set("css_class", opt_get(&s.css_class));
             st
         }
         ColumnChild::MjSocial(s) => social_to_form(s),
@@ -473,8 +572,17 @@ fn leaf_to_form(c: &ColumnChild) -> EditFormState {
             let mut st = EditFormState::new(&editform::TABLE_FORM);
             st.set("content", tb.content.clone());
             st.set("font_size", opt_get(&tb.font_size));
+            st.set("font_family", opt_get(&tb.font_family));
+            st.set("line_height", opt_get(&tb.line_height));
             st.set("color", opt_get(&tb.color));
+            st.set("align", align_str(tb.align));
+            st.set("width", opt_get(&tb.width));
+            st.set("border", opt_get(&tb.border));
             st.set("padding", opt_get(&tb.padding));
+            st.set("cellpadding", opt_get(&tb.cellpadding));
+            st.set("cellspacing", opt_get(&tb.cellspacing));
+            st.set("role", opt_get(&tb.role));
+            st.set("css_class", opt_get(&tb.css_class));
             st
         }
         ColumnChild::MjNavbar(n) => navbar_to_form(n),
@@ -490,8 +598,16 @@ fn apply_leaf(c: &mut ColumnChild, state: &EditFormState) -> Result<()> {
             t.align = parse_align(state.get("align"))?;
             t.font_size = opt_set(state, "font_size");
             t.font_family = opt_set(state, "font_family");
+            t.font_weight = opt_set(state, "font_weight");
+            t.font_style = opt_set(state, "font_style");
+            t.line_height = opt_set(state, "line_height");
             t.color = opt_set(state, "color");
-            t.padding = opt_set(state, "padding");
+            t.padding = opt_set_padding(state)?;
+            t.letter_spacing = opt_set(state, "letter_spacing");
+            t.text_decoration = opt_set(state, "text_decoration");
+            t.text_transform = opt_set(state, "text_transform");
+            t.height = opt_set(state, "height");
+            t.css_class = opt_set(state, "css_class");
             Ok(())
         }
         ColumnChild::MjButton(b) => {
@@ -501,37 +617,73 @@ fn apply_leaf(c: &mut ColumnChild, state: &EditFormState) -> Result<()> {
             b.color = opt_set(state, "color");
             b.align = parse_align(state.get("align"))?;
             b.font_family = opt_set(state, "font_family");
-            b.border_radius = opt_set(state, "border_radius");
+            b.font_size = opt_set(state, "font_size");
+            b.font_weight = opt_set(state, "font_weight");
+            b.font_style = opt_set(state, "font_style");
+            b.border = opt_set(state, "border");
+            b.border_radius = opt_set_unit(state, "border_radius")?;
+            b.inner_padding = opt_set_named_padding(state, "inner_padding")?;
             b.width = opt_set(state, "width");
-            b.padding = opt_set(state, "padding");
+            b.height = opt_set(state, "height");
+            b.target = opt_set(state, "target");
+            b.padding = opt_set_padding(state)?;
+            b.letter_spacing = opt_set(state, "letter_spacing");
+            b.line_height = opt_set(state, "line_height");
+            b.text_decoration = opt_set(state, "text_decoration");
+            b.text_transform = opt_set(state, "text_transform");
+            b.rel = opt_set(state, "rel");
+            b.title = opt_set(state, "title");
+            b.css_class = opt_set(state, "css_class");
             Ok(())
         }
         ColumnChild::MjImage(i) => {
             i.src = state.get("src").trim().to_string();
             i.alt = state.get("alt").to_string();
             i.href = opt_set(state, "href");
+            i.title = opt_set(state, "title");
             i.width = opt_set(state, "width");
+            i.height = opt_set(state, "height");
             i.align = parse_align(state.get("align"))?;
             i.fluid_on_mobile = parse_bool(state.get("fluid_on_mobile"))?;
-            i.padding = opt_set(state, "padding");
+            i.border = opt_set(state, "border");
+            i.border_radius = opt_set_unit(state, "border_radius")?;
+            i.padding = opt_set_padding(state)?;
+            i.target = opt_set(state, "target");
+            i.rel = opt_set(state, "rel");
+            i.css_class = opt_set(state, "css_class");
             Ok(())
         }
         ColumnChild::MjDivider(d) => {
             d.border_color = opt_set(state, "border_color");
             d.border_width = opt_set(state, "border_width");
-            d.padding = opt_set(state, "padding");
+            d.border_style = opt_set(state, "border_style");
+            d.width = opt_set(state, "width");
+            d.align = parse_align(state.get("align"))?;
+            d.padding = opt_set_padding(state)?;
+            d.css_class = opt_set(state, "css_class");
             Ok(())
         }
         ColumnChild::MjSpacer(s) => {
             s.height = state.get("height").trim().to_string();
+            s.padding = opt_set_padding(state)?;
+            s.css_class = opt_set(state, "css_class");
             Ok(())
         }
         ColumnChild::MjSocial(s) => apply_social(s, state),
         ColumnChild::MjTable(tb) => {
             tb.content = state.get("content").to_string();
             tb.font_size = opt_set(state, "font_size");
+            tb.font_family = opt_set(state, "font_family");
+            tb.line_height = opt_set(state, "line_height");
             tb.color = opt_set(state, "color");
-            tb.padding = opt_set(state, "padding");
+            tb.align = parse_align(state.get("align"))?;
+            tb.width = opt_set(state, "width");
+            tb.border = opt_set(state, "border");
+            tb.padding = opt_set_padding(state)?;
+            tb.cellpadding = opt_set(state, "cellpadding");
+            tb.cellspacing = opt_set(state, "cellspacing");
+            tb.role = opt_set(state, "role");
+            tb.css_class = opt_set(state, "css_class");
             Ok(())
         }
         ColumnChild::MjNavbar(n) => apply_navbar(n, state),
@@ -547,6 +699,12 @@ fn navbar_to_form(n: &MjNavbar) -> EditFormState {
     st.set("base_url", opt_get(&n.base_url));
     st.set("align", align_str(n.align));
     st.set("padding", opt_get(&n.padding));
+    st.set("ico_align", opt_get(&n.ico_align));
+    st.set("ico_font_size", opt_get(&n.ico_font_size));
+    st.set("ico_padding", opt_get(&n.ico_padding));
+    st.set("ico_open", opt_get(&n.ico_open));
+    st.set("ico_close", opt_get(&n.ico_close));
+    st.set("css_class", opt_get(&n.css_class));
     st
 }
 
@@ -555,7 +713,13 @@ fn apply_navbar(n: &mut MjNavbar, state: &EditFormState) -> Result<()> {
     n.ico_color = opt_set(state, "ico_color");
     n.base_url = opt_set(state, "base_url");
     n.align = parse_align(state.get("align"))?;
-    n.padding = opt_set(state, "padding");
+    n.padding = opt_set_padding(state)?;
+    n.ico_align = opt_set(state, "ico_align");
+    n.ico_font_size = opt_set(state, "ico_font_size");
+    n.ico_padding = opt_set_named_padding(state, "ico_padding")?;
+    n.ico_open = opt_set(state, "ico_open");
+    n.ico_close = opt_set(state, "ico_close");
+    n.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -564,7 +728,13 @@ fn navbar_link_to_form(l: &MjNavbarLink) -> EditFormState {
     st.set("href", l.href.clone());
     st.set("content", l.content.clone());
     st.set("color", opt_get(&l.color));
+    st.set("font_family", opt_get(&l.font_family));
+    st.set("font_size", opt_get(&l.font_size));
+    st.set("font_weight", opt_get(&l.font_weight));
+    st.set("text_decoration", opt_get(&l.text_decoration));
+    st.set("text_transform", opt_get(&l.text_transform));
     st.set("padding", opt_get(&l.padding));
+    st.set("css_class", opt_get(&l.css_class));
     st
 }
 
@@ -572,7 +742,13 @@ fn apply_navbar_link(l: &mut MjNavbarLink, state: &EditFormState) -> Result<()> 
     l.href = state.get("href").to_string();
     l.content = state.get("content").to_string();
     l.color = opt_set(state, "color");
-    l.padding = opt_set(state, "padding");
+    l.font_family = opt_set(state, "font_family");
+    l.font_size = opt_set(state, "font_size");
+    l.font_weight = opt_set(state, "font_weight");
+    l.text_decoration = opt_set(state, "text_decoration");
+    l.text_transform = opt_set(state, "text_transform");
+    l.padding = opt_set_padding(state)?;
+    l.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -580,12 +756,26 @@ fn accordion_to_form(a: &MjAccordion) -> EditFormState {
     let mut st = EditFormState::new(&editform::ACCORDION_FORM);
     st.set("border", opt_get(&a.border));
     st.set("padding", opt_get(&a.padding));
+    st.set("font_family", opt_get(&a.font_family));
+    st.set("icon_position", opt_get(&a.icon_position));
+    st.set("icon_width", opt_get(&a.icon_width));
+    st.set("icon_height", opt_get(&a.icon_height));
+    st.set("icon_wrapped_url", opt_get(&a.icon_wrapped_url));
+    st.set("icon_unwrapped_url", opt_get(&a.icon_unwrapped_url));
+    st.set("css_class", opt_get(&a.css_class));
     st
 }
 
 fn apply_accordion(a: &mut MjAccordion, state: &EditFormState) -> Result<()> {
     a.border = opt_set(state, "border");
-    a.padding = opt_set(state, "padding");
+    a.padding = opt_set_padding(state)?;
+    a.font_family = opt_set(state, "font_family");
+    a.icon_position = opt_set(state, "icon_position");
+    a.icon_width = opt_set(state, "icon_width");
+    a.icon_height = opt_set(state, "icon_height");
+    a.icon_wrapped_url = opt_set(state, "icon_wrapped_url");
+    a.icon_unwrapped_url = opt_set(state, "icon_unwrapped_url");
+    a.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -594,6 +784,7 @@ fn accordion_el_to_form(e: &MjAccordionElement) -> EditFormState {
     st.set("title", e.title.clone());
     st.set("content", e.content.clone());
     st.set("background_color", opt_get(&e.background_color));
+    st.set("css_class", opt_get(&e.css_class));
     st
 }
 
@@ -601,6 +792,7 @@ fn apply_accordion_el(e: &mut MjAccordionElement, state: &EditFormState) -> Resu
     e.title = state.get("title").to_string();
     e.content = state.get("content").to_string();
     e.background_color = opt_set(state, "background_color");
+    e.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -608,13 +800,21 @@ fn carousel_to_form(c: &MjCarousel) -> EditFormState {
     let mut st = EditFormState::new(&editform::CAROUSEL_FORM);
     st.set("align", align_str(c.align));
     st.set("padding", opt_get(&c.padding));
+    st.set("border_radius", opt_get(&c.border_radius));
+    st.set("tb_border_radius", opt_get(&c.tb_border_radius));
+    st.set("icon_width", opt_get(&c.icon_width));
+    st.set("css_class", opt_get(&c.css_class));
     st.set("thumbnails", thumbnails_str(c.thumbnails));
     st
 }
 
 fn apply_carousel(c: &mut MjCarousel, state: &EditFormState) -> Result<()> {
     c.align = parse_align(state.get("align"))?;
-    c.padding = opt_set(state, "padding");
+    c.padding = opt_set_padding(state)?;
+    c.border_radius = opt_set_unit(state, "border_radius")?;
+    c.tb_border_radius = opt_set_unit(state, "tb_border_radius")?;
+    c.icon_width = opt_set(state, "icon_width");
+    c.css_class = opt_set(state, "css_class");
     c.thumbnails = parse_thumbnails(state.get("thumbnails"))?;
     Ok(())
 }
@@ -625,6 +825,8 @@ fn carousel_img_to_form(i: &MjCarouselImage) -> EditFormState {
     st.set("alt", i.alt.clone());
     st.set("href", opt_get(&i.href));
     st.set("thumbnails_src", opt_get(&i.thumbnails_src));
+    st.set("border_radius", opt_get(&i.border_radius));
+    st.set("css_class", opt_get(&i.css_class));
     st
 }
 
@@ -633,6 +835,8 @@ fn apply_carousel_img(i: &mut MjCarouselImage, state: &EditFormState) -> Result<
     i.alt = state.get("alt").to_string();
     i.href = opt_set(state, "href");
     i.thumbnails_src = opt_set(state, "thumbnails_src");
+    i.border_radius = opt_set_unit(state, "border_radius")?;
+    i.css_class = opt_set(state, "css_class");
     Ok(())
 }
 
@@ -641,6 +845,13 @@ fn social_to_form(s: &MjSocial) -> EditFormState {
     st.set("mode", social_mode_str(s.mode));
     st.set("align", align_str(s.align));
     st.set("icon_size", s.icon_size.clone());
+    st.set("border_radius", opt_get(&s.border_radius));
+    st.set("padding", opt_get(&s.padding));
+    st.set("icon_padding", opt_get(&s.icon_padding));
+    st.set("inner_padding", opt_get(&s.inner_padding));
+    st.set("font_size", opt_get(&s.font_size));
+    st.set("color", opt_get(&s.color));
+    st.set("css_class", opt_get(&s.css_class));
     st.sub_state
         .insert("elements".into(), social_items(&s.elements));
     st.selected_sub_item.insert("elements".into(), 0);
@@ -651,6 +862,13 @@ fn apply_social(s: &mut MjSocial, state: &EditFormState) -> Result<()> {
     s.mode = parse_social_mode(state.get("mode"))?;
     s.align = parse_align(state.get("align"))?;
     s.icon_size = state.get("icon_size").trim().to_string();
+    s.border_radius = opt_set_unit(state, "border_radius")?;
+    s.padding = opt_set_padding(state)?;
+    s.icon_padding = opt_set_named_padding(state, "icon_padding")?;
+    s.inner_padding = opt_set_named_padding(state, "inner_padding")?;
+    s.font_size = opt_set(state, "font_size");
+    s.color = opt_set(state, "color");
+    s.css_class = opt_set(state, "css_class");
     s.elements = parse_social_items(state.sub_state.get("elements"))?;
     Ok(())
 }
@@ -770,6 +988,11 @@ fn social_items(elements: &[MjSocialElement]) -> Vec<EditFormState> {
         item.set("name", social_net_str(el.name));
         item.set("href", el.href.clone());
         item.set("src", opt_get(&el.src));
+        item.set("alt", opt_get(&el.alt));
+        item.set("background_color", opt_get(&el.background_color));
+        item.set("icon_size", opt_get(&el.icon_size));
+        item.set("padding", opt_get(&el.padding));
+        item.set("css_class", opt_get(&el.css_class));
         items.push(item);
     }
     items
@@ -783,6 +1006,11 @@ fn parse_social_items(items: Option<&Vec<EditFormState>>) -> Result<Vec<MjSocial
                 name: parse_social_net(item.get("name"))?,
                 href: item.get("href").to_string(),
                 src: opt_set(item, "src"),
+                alt: opt_set(item, "alt"),
+                background_color: opt_set(item, "background_color"),
+                icon_size: opt_set(item, "icon_size"),
+                padding: opt_set_named_padding(item, "padding")?,
+                css_class: opt_set(item, "css_class"),
             });
         }
     }
@@ -802,12 +1030,34 @@ fn opt_set(state: &EditFormState, id: &str) -> Option<String> {
     }
 }
 
-fn bool_str(v: bool) -> &'static str {
-    if v {
-        "true"
-    } else {
-        "false"
+fn opt_set_padding(state: &EditFormState) -> Result<Option<String>> {
+    opt_set_named_padding(state, "padding")
+}
+
+fn opt_set_named_padding(state: &EditFormState, id: &str) -> Result<Option<String>> {
+    let t = state.get(id).trim();
+    if t.is_empty() {
+        return Ok(None);
     }
+    match crate::padding::normalize_padding(t) {
+        Ok(v) => Ok(Some(v)),
+        Err(msg) => Err(anyhow!("{id} {msg}")),
+    }
+}
+
+fn opt_set_unit(state: &EditFormState, id: &str) -> Result<Option<String>> {
+    let t = state.get(id).trim();
+    if t.is_empty() {
+        return Ok(None);
+    }
+    match crate::padding::normalize_padding(t).or_else(|_| crate::padding::normalize_unit(t)) {
+        Ok(v) => Ok(Some(v)),
+        Err(msg) => Err(anyhow!("{id} {msg}")),
+    }
+}
+
+fn bool_str(v: bool) -> &'static str {
+    if v { "true" } else { "false" }
 }
 
 fn parse_bool(s: &str) -> Result<bool> {
@@ -909,6 +1159,16 @@ fn social_net_str(n: SocialNetwork) -> &'static str {
         SocialNetwork::X => "x",
         SocialNetwork::Github => "github",
         SocialNetwork::Web => "web",
+        SocialNetwork::Youtube => "youtube",
+        SocialNetwork::Pinterest => "pinterest",
+        SocialNetwork::Google => "google",
+        SocialNetwork::Tumblr => "tumblr",
+        SocialNetwork::Snapchat => "snapchat",
+        SocialNetwork::Vimeo => "vimeo",
+        SocialNetwork::Medium => "medium",
+        SocialNetwork::Soundcloud => "soundcloud",
+        SocialNetwork::Dribbble => "dribbble",
+        SocialNetwork::Xing => "xing",
     }
 }
 
@@ -920,6 +1180,16 @@ fn parse_social_net(s: &str) -> Result<SocialNetwork> {
         "x" => Ok(SocialNetwork::X),
         "github" => Ok(SocialNetwork::Github),
         "web" => Ok(SocialNetwork::Web),
+        "youtube" => Ok(SocialNetwork::Youtube),
+        "pinterest" => Ok(SocialNetwork::Pinterest),
+        "google" => Ok(SocialNetwork::Google),
+        "tumblr" => Ok(SocialNetwork::Tumblr),
+        "snapchat" => Ok(SocialNetwork::Snapchat),
+        "vimeo" => Ok(SocialNetwork::Vimeo),
+        "medium" => Ok(SocialNetwork::Medium),
+        "soundcloud" => Ok(SocialNetwork::Soundcloud),
+        "dribbble" => Ok(SocialNetwork::Dribbble),
+        "xing" => Ok(SocialNetwork::Xing),
         other => Err(anyhow!("invalid social network: {other}")),
     }
 }

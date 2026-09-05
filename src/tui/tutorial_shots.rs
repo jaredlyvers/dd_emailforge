@@ -6,9 +6,9 @@ use super::*;
 use crate::model::Template;
 use crate::starters::StarterKind;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::style::Color;
-use ratatui::Terminal;
 use std::fs;
 use std::path::Path;
 

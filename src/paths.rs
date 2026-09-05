@@ -45,9 +45,9 @@ pub fn theme_candidates_from(
 ) -> Vec<(PathBuf, &'static str)> {
     let mut c = vec![(local, "local")];
     let global = match xdg {
-        Some(xdg) if !xdg.is_empty() => {
-            PathBuf::from(xdg).join("ldnddev").join("dd_emailforge_theme.yml")
-        }
+        Some(xdg) if !xdg.is_empty() => PathBuf::from(xdg)
+            .join("ldnddev")
+            .join("dd_emailforge_theme.yml"),
         _ => match home {
             Some(home) => PathBuf::from(home)
                 .join(".config")

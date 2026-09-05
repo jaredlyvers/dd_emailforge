@@ -39,7 +39,9 @@ impl std::fmt::Display for MjmlError {
 impl std::error::Error for MjmlError {}
 
 pub fn not_found_message(searched: &[String]) -> String {
-    let mut s = String::from("mjml CLI not found. Install the pin from this template:\n  cd <template-dir> && npm install\nLooked in:\n");
+    let mut s = String::from(
+        "mjml CLI not found. Install the pin from this template:\n  cd <template-dir> && npm install\nLooked in:\n",
+    );
     for p in searched {
         s.push_str("  ");
         s.push_str(p);
@@ -188,12 +190,7 @@ pub struct MjmlWatch {
 }
 
 impl MjmlWatch {
-    pub fn spawn(
-        bin: &Path,
-        cwd: &Path,
-        input: &Path,
-        output: &Path,
-    ) -> Result<Self, MjmlError> {
+    pub fn spawn(bin: &Path, cwd: &Path, input: &Path, output: &Path) -> Result<Self, MjmlError> {
         let mut cmd = Command::new(bin);
         cmd.current_dir(cwd)
             .arg("-w")
@@ -263,11 +260,8 @@ mod tests {
 
     fn temp_dir() -> PathBuf {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "dd_emailforge_mjml_{}_{}",
-            std::process::id(),
-            n
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("dd_emailforge_mjml_{}_{}", std::process::id(), n));
         fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -301,7 +295,11 @@ mod tests {
         let dir = temp_dir();
         match discover_mjml(&dir) {
             Err(MjmlError::NotFound { searched }) => {
-                assert!(searched.iter().any(|s| s.contains("node_modules/.bin/mjml")));
+                assert!(
+                    searched
+                        .iter()
+                        .any(|s| s.contains("node_modules/.bin/mjml"))
+                );
                 assert!(searched.iter().any(|s| s == "$PATH"));
             }
             other => panic!("expected NotFound, got {other:?}"),
@@ -314,7 +312,10 @@ mod tests {
         // Lock the argv contract in a helper snapshot of the flag list.
         let mut cmd = Command::new("mjml");
         push_mjml_flags(&mut cmd);
-        let args: Vec<String> = cmd.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
         let joined = args.join(" ");
         assert!(joined.contains("validationLevel"));
         assert!(joined.contains("strict"));

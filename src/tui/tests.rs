@@ -2,8 +2,8 @@ use super::*;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 
 fn send_key(app: &mut App, code: KeyCode, modifiers: KeyModifiers) {
     app.handle_event(Event::Key(KeyEvent::new(code, modifiers)))
@@ -169,20 +169,22 @@ fn warning_toast_from_theme_status_does_not_panic_draw() {
 fn p_without_template_toasts_warning() {
     let mut app = chrome_app();
     send_key(&mut app, KeyCode::Char('p'), KeyModifiers::NONE);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("No template open")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("No template open"))
+    );
 }
 
 #[test]
 fn shift_e_without_template_toasts_warning() {
     let mut app = chrome_app();
     send_key(&mut app, KeyCode::Char('E'), KeyModifiers::SHIFT);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("No template open")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("No template open"))
+    );
 }
 
 #[test]
@@ -190,10 +192,11 @@ fn f3_without_template_toasts_warning() {
     let mut app = chrome_app();
     send_key(&mut app, KeyCode::F(3), KeyModifiers::NONE);
     assert!(app.modal.is_none());
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("No template open")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("No template open"))
+    );
 }
 
 #[test]
@@ -201,10 +204,11 @@ fn f3_on_minimal_template_passes() {
     let mut app = app_with_template();
     send_key(&mut app, KeyCode::F(3), KeyModifiers::NONE);
     assert!(app.modal.is_none());
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Validation passed")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("Validation passed"))
+    );
 }
 
 #[test]
@@ -219,14 +223,16 @@ fn f3_on_transactional_starter_is_clean() {
     );
     send_key(&mut app, KeyCode::F(3), KeyModifiers::NONE);
     assert!(app.modal.is_none());
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Validation passed")));
-    assert!(!app
-        .toasts
-        .iter()
-        .any(|t| matches!(t.level, ToastLevel::Warning)));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("Validation passed"))
+    );
+    assert!(
+        !app.toasts
+            .iter()
+            .any(|t| matches!(t.level, ToastLevel::Warning))
+    );
 }
 
 #[test]
@@ -356,22 +362,25 @@ fn h_collapses_body_with_children() {
         Some(t),
         None,
     );
-    assert!(app
-        .tree_rows()
-        .iter()
-        .any(|r| r.label.contains("email-header")));
+    assert!(
+        app.tree_rows()
+            .iter()
+            .any(|r| r.label.contains("email-header"))
+    );
     // BODY is row 2
     app.selected_row = 2;
     send_key(&mut app, KeyCode::Char('h'), KeyModifiers::NONE);
-    assert!(!app
-        .tree_rows()
-        .iter()
-        .any(|r| r.label.contains("email-header")));
+    assert!(
+        !app.tree_rows()
+            .iter()
+            .any(|r| r.label.contains("email-header"))
+    );
     send_key(&mut app, KeyCode::Char('l'), KeyModifiers::NONE);
-    assert!(app
-        .tree_rows()
-        .iter()
-        .any(|r| r.label.contains("email-header")));
+    assert!(
+        app.tree_rows()
+            .iter()
+            .any(|r| r.label.contains("email-header"))
+    );
 }
 
 #[test]
@@ -429,7 +438,9 @@ fn app_with_one_column() -> App {
             padding: None,
             inner_background_color: None,
             components: Vec::new(),
+            ..Default::default()
         })],
+        ..Default::default()
     }));
     App::new(
         AppTheme::default(),
@@ -580,10 +591,11 @@ fn v_refuses_last_column() {
         .expect("section row");
     app.selected_row = idx;
     send_key(&mut app, KeyCode::Char('V'), KeyModifiers::SHIFT);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("A section needs at least one column")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("A section needs at least one column"))
+    );
     let crate::model::BodyNode::MjSection(s) = &app.template.as_ref().unwrap().body.nodes[0] else {
         panic!("expected mj-section");
     };
@@ -599,6 +611,88 @@ fn draw_formedit_does_not_panic() {
     terminal.draw(|f| app.draw(f)).expect("draw form");
 }
 
+fn buffer_text(terminal: &Terminal<TestBackend>) -> String {
+    let buf = terminal.backend().buffer();
+    let mut out = String::new();
+    for y in 0..buf.area.height {
+        for x in 0..buf.area.width {
+            out.push_str(buf[(x, y)].symbol());
+        }
+        out.push('\n');
+    }
+    out
+}
+
+#[test]
+fn formedit_padding_shows_expected_units() {
+    let mut app = app_with_one_column();
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-column"))
+        .expect("column row");
+    app.selected_row = idx;
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    match &app.modal {
+        Some(Modal::FormEdit { state, .. }) => {
+            let pad = state
+                .form
+                .fields
+                .iter()
+                .find(|f| f.id == "padding")
+                .expect("padding field");
+            assert_eq!(pad.hint, Some(crate::padding::HINT));
+            assert_eq!(pad.placeholder, Some(crate::padding::PLACEHOLDER));
+        }
+        other => panic!("expected FormEdit, got {other:?}"),
+    }
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal.draw(|f| app.draw(f)).expect("draw form");
+    let text = buffer_text(&terminal);
+    assert!(text.contains("1-4"), "{text}");
+    assert!(text.contains("px"), "{text}");
+    assert!(text.contains("10px"), "{text}");
+}
+
+#[test]
+fn form_save_normalizes_unitless_padding() {
+    let mut app = app_with_one_column();
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-column"))
+        .expect("column row");
+    app.selected_row = idx;
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    form_state_mut(&mut app).set("padding", "12 10 12 10");
+    send_key(&mut app, KeyCode::Char('s'), KeyModifiers::CONTROL);
+    assert!(app.modal.is_none());
+    let crate::model::BodyNode::MjSection(s) = &app.template.as_ref().unwrap().body.nodes[0] else {
+        panic!("expected mj-section");
+    };
+    let crate::model::SectionChild::MjColumn(col) = &s.children[0] else {
+        panic!("expected column");
+    };
+    assert_eq!(col.padding.as_deref(), Some("12px 10px 12px 10px"));
+}
+
+#[test]
+fn form_save_rejects_invalid_padding() {
+    let mut app = app_with_one_column();
+    let idx = app
+        .tree_rows()
+        .iter()
+        .position(|r| r.label.contains("mj-column"))
+        .expect("column row");
+    app.selected_row = idx;
+    send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    form_state_mut(&mut app).set("padding", "10em");
+    send_key(&mut app, KeyCode::Char('s'), KeyModifiers::CONTROL);
+    assert!(matches!(app.modal, Some(Modal::FormEdit { .. })));
+    assert!(app.toasts.iter().any(|t| t.message.contains("padding")));
+}
+
 #[test]
 fn insert_wraps_leaf_on_empty_body() {
     let mut app = app_with_template();
@@ -612,10 +706,11 @@ fn insert_wraps_leaf_on_empty_body() {
         send_key(&mut app, KeyCode::Char(c), KeyModifiers::NONE);
     }
     send_key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Wrapped in mj-section")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("Wrapped in mj-section"))
+    );
     let nodes = &app.template.as_ref().unwrap().body.nodes;
     assert_eq!(nodes.len(), 1);
     match &nodes[0] {
@@ -637,10 +732,11 @@ fn insert_illegal_on_head_toasts() {
     let mut app = app_with_template();
     app.selected_row = 0;
     app.insert_kind(super::component_kind::ComponentKind::MjText);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Cannot insert mj-text here")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("Cannot insert mj-text here"))
+    );
     assert!(app.template.as_ref().unwrap().body.nodes.is_empty());
 }
 
@@ -694,10 +790,11 @@ fn insert_navbar_link_on_column_toasts() {
         .expect("column row");
     app.selected_row = col;
     app.insert_kind(super::component_kind::ComponentKind::MjNavbarLink);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Cannot insert mj-navbar-link here")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("Cannot insert mj-navbar-link here"))
+    );
 }
 
 #[test]
@@ -710,10 +807,11 @@ fn insert_navbar_link_on_section_toasts() {
         .expect("section row");
     app.selected_row = idx;
     app.insert_kind(super::component_kind::ComponentKind::MjNavbarLink);
-    assert!(app
-        .toasts
-        .iter()
-        .any(|t| t.message.contains("Cannot insert mj-navbar-link here")));
+    assert!(
+        app.toasts
+            .iter()
+            .any(|t| t.message.contains("Cannot insert mj-navbar-link here"))
+    );
 }
 
 #[test]

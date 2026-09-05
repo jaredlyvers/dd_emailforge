@@ -10,14 +10,14 @@ pub(super) use crossterm::event::{
 };
 use crossterm::execute;
 use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
+use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 pub(super) use ratatui::layout::{Constraint, Direction, Layout, Rect};
 pub(super) use ratatui::style::{Modifier, Style};
 pub(super) use ratatui::text::{Line, Span};
 pub(super) use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
-use ratatui::Terminal;
 
 use crate::model::Template;
 use crate::storage;

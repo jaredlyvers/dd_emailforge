@@ -77,6 +77,7 @@ fn head_lines(t: &Template) -> Vec<String> {
         format!("subject:     {}", dash(&t.subject)),
         format!("preheader:   {}", dash(&t.preheader)),
         format!("lang:        {}", dash(&t.lang)),
+        format!("dir:         {}", dash(&t.dir)),
         format!("title:       {}", dash(&t.head.title)),
         format!("breakpoint:  {}", dash(&t.head.breakpoint)),
         format!("base_url:    {}", dash(&t.base_url)),
@@ -850,11 +851,7 @@ impl Canvas {
 }
 
 fn dash(s: &str) -> &str {
-    if s.trim().is_empty() {
-        "—"
-    } else {
-        s
-    }
+    if s.trim().is_empty() { "—" } else { s }
 }
 
 fn truncate(s: &str, max: usize) -> String {
@@ -926,6 +923,7 @@ mod tests {
                         font_family: None,
                         color: None,
                         padding: None,
+                        ..Default::default()
                     }),
                     ColumnChild::MjButton(crate::model::MjButton {
                         content: "Go".into(),
@@ -937,9 +935,12 @@ mod tests {
                         border_radius: None,
                         width: None,
                         padding: None,
+                        ..Default::default()
                     }),
                 ],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         t
     }

@@ -10,8 +10,9 @@ Living product spec: `docs/SPEC.md`. Visual contract: `LDNDDEV_TUI_VISUAL_STANDA
 src/
   main.rs                 clap CLI: init / tui / validate / export / preview / show
   model.rs                Template → brand / head / body.nodes (serde, kebab-case tags)
+  padding.rs              MJML padding shorthand (1-4 px/% values; bare numbers → px)
   storage.rs              JSON load/save, path resolve, atomic write, .backup
-  validate.rs             structural + images + marketing footer + version
+  validate.rs             structural + images + marketing footer + version + padding
   emit.rs                 Template → MJML (Preview vs Export rewrite of image src)
   mjml.rs                 discover official CLI, one-shot compile, mjml -w
   preview.rs              loopback wrapper (600/320 iframes), /__mtime, /__meta

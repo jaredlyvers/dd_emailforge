@@ -4,6 +4,11 @@ version: 1
 node_scope: head
 insert: false
 fields:
+  - id: dir
+    required: false
+    type: enum
+    options: ["auto", "ltr", "rtl"]
+    maps_to: "mjml dir (document-level, edited in HEAD FormEdit)"
   - id: title
     required: true
     type: string

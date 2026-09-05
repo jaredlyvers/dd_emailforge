@@ -24,6 +24,14 @@ fields:
     required: false
     type: string
     maps_to: "mj-hero background-height"
+  - id: background_width
+    required: false
+    type: string
+    maps_to: "mj-hero background-width"
+  - id: background_position
+    required: false
+    type: string
+    maps_to: "mj-hero background-position"
   - id: width
     required: false
     type: string
@@ -32,6 +40,21 @@ fields:
     required: false
     type: string
     maps_to: "mj-hero height"
+  - id: padding
+    required: false
+    type: string
+    hint: "1-4 values with px or %"
+    maps_to: "mj-hero padding"
+  - id: border_radius
+    required: false
+    type: string
+    hint: "px or %"
+    maps_to: "mj-hero border-radius"
+  - id: vertical_align
+    required: false
+    type: enum
+    options: ["top", "middle", "bottom"]
+    maps_to: "mj-hero vertical-align"
   - id: children
     required: true
     type: list

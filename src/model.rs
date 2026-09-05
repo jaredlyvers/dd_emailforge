@@ -46,6 +46,8 @@ pub struct Template {
     pub preheader: String,
     #[serde(default = "default_lang")]
     pub lang: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub dir: String,
     #[serde(default)]
     pub base_url: String,
     pub brand: Brand,
@@ -62,6 +64,7 @@ impl Template {
             subject: "You're in.".to_string(),
             preheader: "Here's what happens next.".to_string(),
             lang: default_lang(),
+            dir: String::new(),
             base_url: String::new(),
             brand: Brand::default(),
             head: Head {
@@ -153,6 +156,8 @@ pub struct WebFont {
 pub struct Body {
     #[serde(default)]
     pub background_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub nodes: Vec<BodyNode>,
 }
@@ -244,21 +249,47 @@ pub enum SocialNetwork {
     X,
     Github,
     Web,
+    Youtube,
+    Pinterest,
+    Google,
+    Tumblr,
+    Snapchat,
+    Vimeo,
+    Medium,
+    Soundcloud,
+    Dribbble,
+    Xing,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjSection {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gutter: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_repeat: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<String>,
     #[serde(default)]
     pub full_width: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub children: Vec<SectionChild>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjColumn {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<String>,
@@ -268,33 +299,65 @@ pub struct MjColumn {
     pub padding: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inner_background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inner_border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inner_border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_align: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub components: Vec<ColumnChild>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjWrapper {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_repeat: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gap: Option<String>,
     #[serde(default)]
     pub full_width: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub children: Vec<BodyNode>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjGroup {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_align: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub children: Vec<MjColumn>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjText {
     #[serde(default)]
     pub content: String,
@@ -305,12 +368,28 @@ pub struct MjText {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_weight: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_style: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub letter_spacing: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_decoration: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_transform: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjButton {
     #[serde(default)]
     pub content: String,
@@ -325,11 +404,39 @@ pub struct MjButton {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_weight: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_style: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inner_padding: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub letter_spacing: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_decoration: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_transform: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rel: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -343,27 +450,84 @@ pub struct MjImage {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align: Option<Align>,
     #[serde(default = "default_true")]
     pub fluid_on_mobile: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rel: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+impl Default for MjImage {
+    fn default() -> Self {
+        Self {
+            src: String::new(),
+            alt: String::new(),
+            href: None,
+            width: None,
+            height: None,
+            align: None,
+            fluid_on_mobile: true,
+            border: None,
+            border_radius: None,
+            title: None,
+            padding: None,
+            target: None,
+            rel: None,
+            css_class: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjDivider {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_width: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_style: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MjSpacer {
     #[serde(default = "default_spacer_height")]
     pub height: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
+}
+
+impl Default for MjSpacer {
+    fn default() -> Self {
+        Self {
+            height: default_spacer_height(),
+            padding: None,
+            css_class: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -374,8 +538,40 @@ pub struct MjSocial {
     pub align: Option<Align>,
     #[serde(default = "default_icon_size")]
     pub icon_size: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inner_padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub elements: Vec<MjSocialElement>,
+}
+
+impl Default for MjSocial {
+    fn default() -> Self {
+        Self {
+            mode: SocialMode::Horizontal,
+            align: None,
+            icon_size: default_icon_size(),
+            border_radius: None,
+            padding: None,
+            icon_padding: None,
+            inner_padding: None,
+            font_size: None,
+            color: None,
+            css_class: None,
+            elements: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -384,21 +580,64 @@ pub struct MjSocialElement {
     pub href: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub src: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+impl Default for MjSocialElement {
+    fn default() -> Self {
+        Self {
+            name: SocialNetwork::X,
+            href: String::new(),
+            src: None,
+            background_color: None,
+            padding: None,
+            icon_size: None,
+            alt: None,
+            css_class: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjTable {
     #[serde(default)]
     pub content: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_size: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<Align>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cellpadding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cellspacing: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjNavbar {
     #[serde(default)]
     pub hamburger: bool,
@@ -410,11 +649,23 @@ pub struct MjNavbar {
     pub align: Option<Align>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ico_align: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ico_font_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ico_padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ico_open: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ico_close: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub links: Vec<MjNavbarLink>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjNavbarLink {
     #[serde(default)]
     pub href: String,
@@ -423,20 +674,46 @@ pub struct MjNavbarLink {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_weight: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_decoration: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_transform: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjAccordion {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_position: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_wrapped_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_unwrapped_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub elements: Vec<MjAccordionElement>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjAccordionElement {
     #[serde(default)]
     pub title: String,
@@ -444,21 +721,31 @@ pub struct MjAccordionElement {
     pub content: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjCarousel {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align: Option<Align>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tb_border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub thumbnails: Thumbnails,
     #[serde(default)]
     pub images: Vec<MjCarouselImage>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjCarouselImage {
     #[serde(default)]
     pub src: String,
@@ -468,9 +755,13 @@ pub struct MjCarouselImage {
     pub href: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thumbnails_src: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MjHero {
     #[serde(default)]
     pub mode: HeroMode,
@@ -481,9 +772,21 @@ pub struct MjHero {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_height: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_width: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_position: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub padding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_radius: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_align: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
     #[serde(default)]
     pub children: Vec<ColumnChild>,
 }
@@ -608,6 +911,7 @@ mod tests {
                             font_family: Some("Raleway, Arial, sans-serif".to_string()),
                             color: None,
                             padding: None,
+                            ..Default::default()
                         }),
                         ColumnChild::MjButton(MjButton {
                             content: "Read more".to_string(),
@@ -619,6 +923,7 @@ mod tests {
                             border_radius: None,
                             width: None,
                             padding: None,
+                            ..Default::default()
                         }),
                         ColumnChild::MjImage(MjImage {
                             src: "https://cdn.example.com/a.png".to_string(),
@@ -628,6 +933,7 @@ mod tests {
                             align: Some(Align::Center),
                             fluid_on_mobile: true,
                             padding: None,
+                            ..Default::default()
                         }),
                         ColumnChild::MjSocial(MjSocial {
                             mode: SocialMode::Horizontal,
@@ -637,13 +943,16 @@ mod tests {
                                 name: SocialNetwork::X,
                                 href: "https://x.com/acme".to_string(),
                                 src: None,
+                                ..Default::default()
                             }],
+                            ..Default::default()
                         }),
                         ColumnChild::MjTable(MjTable {
                             content: "<table><tr><td>1</td></tr></table>".to_string(),
                             font_size: None,
                             color: None,
                             padding: None,
+                            ..Default::default()
                         }),
                         ColumnChild::MjNavbar(MjNavbar {
                             hamburger: true,
@@ -656,7 +965,9 @@ mod tests {
                                 content: "Home".to_string(),
                                 color: None,
                                 padding: None,
+                                ..Default::default()
                             }],
+                            ..Default::default()
                         }),
                         ColumnChild::MjAccordion(MjAccordion {
                             border: None,
@@ -665,7 +976,9 @@ mod tests {
                                 title: "Why?".to_string(),
                                 content: "Because.".to_string(),
                                 background_color: None,
+                                ..Default::default()
                             }],
+                            ..Default::default()
                         }),
                         ColumnChild::MjCarousel(MjCarousel {
                             align: None,
@@ -676,10 +989,14 @@ mod tests {
                                 alt: "Slide".to_string(),
                                 href: None,
                                 thumbnails_src: None,
+                                ..Default::default()
                             }],
+                            ..Default::default()
                         }),
                     ],
+                    ..Default::default()
                 })],
+                ..Default::default()
             }),
             BodyNode::MjHero(MjHero {
                 mode: HeroMode::FluidHeight,
@@ -689,6 +1006,7 @@ mod tests {
                 width: None,
                 height: None,
                 children: vec![],
+                ..Default::default()
             }),
             BodyNode::EmailCta(EmailCta {
                 heading: "Go".to_string(),

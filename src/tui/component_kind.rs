@@ -1,10 +1,9 @@
 //! Insert-picker kinds and the legal-target table from the design doc.
 use crate::model::{
     Align, BodyNode, ColumnChild, EmailArticle, EmailCta, EmailFooter, EmailHeader, EmailHero,
-    HeroMode, ImagePosition, MjAccordion, MjAccordionElement, MjButton, MjCarousel,
-    MjCarouselImage, MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjNavbar, MjNavbarLink,
-    MjSection, MjSocial, MjSpacer, MjTable, MjText, MjWrapper, SectionChild, SocialMode, Template,
-    Thumbnails,
+    ImagePosition, MjAccordion, MjAccordionElement, MjButton, MjCarousel, MjCarouselImage,
+    MjColumn, MjDivider, MjGroup, MjHero, MjImage, MjNavbar, MjNavbarLink, MjSection, MjSocial,
+    MjSpacer, MjTable, MjText, MjWrapper, SectionChild, SocialMode, Template,
 };
 
 use super::tree::{Step, TreeId};
@@ -217,6 +216,7 @@ impl ComponentKind {
                 padding: None,
                 full_width: false,
                 children: Vec::new(),
+                ..Default::default()
             }),
             Self::MjHero => BodyNode::MjHero(empty_hero()),
             _ => return None,
@@ -232,6 +232,7 @@ impl ComponentKind {
                 font_family: None,
                 color: None,
                 padding: None,
+                ..Default::default()
             }),
             Self::MjButton => ColumnChild::MjButton(MjButton {
                 content: "Read more".into(),
@@ -243,6 +244,7 @@ impl ComponentKind {
                 border_radius: None,
                 width: None,
                 padding: None,
+                ..Default::default()
             }),
             Self::MjImage => ColumnChild::MjImage(MjImage {
                 src: "https://dummyimage.com/600x200/cccccc/000000".into(),
@@ -252,26 +254,31 @@ impl ComponentKind {
                 align: None,
                 fluid_on_mobile: true,
                 padding: None,
+                ..Default::default()
             }),
             Self::MjDivider => ColumnChild::MjDivider(MjDivider {
                 border_color: None,
                 border_width: None,
                 padding: None,
+                ..Default::default()
             }),
             Self::MjSpacer => ColumnChild::MjSpacer(MjSpacer {
                 height: "24px".into(),
+                ..Default::default()
             }),
             Self::MjSocial => ColumnChild::MjSocial(MjSocial {
                 mode: SocialMode::Horizontal,
                 align: None,
                 icon_size: "32px".into(),
                 elements: Vec::new(),
+                ..Default::default()
             }),
             Self::MjTable => ColumnChild::MjTable(MjTable {
                 content: "<table><tr><td></td></tr></table>".into(),
                 font_size: None,
                 color: None,
                 padding: None,
+                ..Default::default()
             }),
             Self::MjNavbar => ColumnChild::MjNavbar(empty_navbar()),
             Self::MjAccordion => ColumnChild::MjAccordion(empty_accordion()),
@@ -447,95 +454,57 @@ fn locate_section_child<'a>(t: &'a Template, path: &[Step]) -> Option<&'a Sectio
 }
 
 pub(super) fn empty_column() -> MjColumn {
-    MjColumn {
-        width: None,
-        background_color: None,
-        padding: None,
-        inner_background_color: None,
-        components: Vec::new(),
-    }
+    MjColumn::default()
 }
 
 pub(super) fn empty_section() -> MjSection {
-    MjSection {
-        background_color: None,
-        padding: None,
-        full_width: false,
-        children: Vec::new(),
-    }
+    MjSection::default()
 }
 
 pub(super) fn empty_hero() -> MjHero {
-    MjHero {
-        mode: HeroMode::FluidHeight,
-        background_url: None,
-        background_color: None,
-        background_height: None,
-        width: None,
-        height: None,
-        children: Vec::new(),
-    }
+    MjHero::default()
 }
 
 pub(super) fn empty_navbar() -> MjNavbar {
-    MjNavbar {
-        hamburger: false,
-        ico_color: None,
-        base_url: None,
-        align: None,
-        padding: None,
-        links: Vec::new(),
-    }
+    MjNavbar::default()
 }
 
 pub(super) fn empty_navbar_link() -> MjNavbarLink {
     MjNavbarLink {
         href: "https://example.com".into(),
         content: "Link".into(),
-        color: None,
-        padding: None,
+        ..Default::default()
     }
 }
 
 pub(super) fn empty_accordion() -> MjAccordion {
-    MjAccordion {
-        border: None,
-        padding: None,
-        elements: Vec::new(),
-    }
+    MjAccordion::default()
 }
 
 pub(super) fn empty_accordion_element() -> MjAccordionElement {
     MjAccordionElement {
         title: "Title".into(),
         content: "Write something.".into(),
-        background_color: None,
+        ..Default::default()
     }
 }
 
 pub(super) fn empty_carousel() -> MjCarousel {
-    MjCarousel {
-        align: None,
-        padding: None,
-        thumbnails: Thumbnails::Hidden,
-        images: Vec::new(),
-    }
+    MjCarousel::default()
 }
 
 pub(super) fn empty_carousel_image() -> MjCarouselImage {
     MjCarouselImage {
         src: "https://dummyimage.com/600x200/cccccc/000000".into(),
         alt: "Image".into(),
-        href: None,
-        thumbnails_src: None,
+        ..Default::default()
     }
 }
 
 pub(super) fn empty_group() -> MjGroup {
     MjGroup {
-        width: None,
-        background_color: None,
         children: vec![empty_column()],
+        ..Default::default()
     }
 }
 
@@ -548,6 +517,7 @@ pub(super) fn wrap_leaf_in_section(leaf: ColumnChild) -> BodyNode {
         padding: None,
         full_width: false,
         children: vec![SectionChild::MjColumn(col)],
+        ..Default::default()
     })
 }
 

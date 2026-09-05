@@ -1,10 +1,10 @@
 //! FormEdit textarea layout helpers.
+use ratatui::Frame;
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
-use ratatui::Frame;
 
-use super::editform;
 use super::Rect;
+use super::editform;
 
 pub(super) const TEXTAREA_MAX_DISPLAY_ROWS: u16 = 12;
 

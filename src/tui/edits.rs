@@ -1,9 +1,9 @@
 //! Undo, delete, duplicate, reorder, and column add/remove.
 use crate::model::{BodyNode, MjColumn, MjGroup, MjSection, SectionChild, Template};
 
+use super::App;
 use super::toasts::ToastLevel;
 use super::tree::{Step, TreeId};
-use super::App;
 
 const UNDO_CAP: usize = 20;
 
@@ -211,13 +211,7 @@ enum ColOwnerKind {
 }
 
 fn empty_column() -> MjColumn {
-    MjColumn {
-        width: None,
-        background_color: None,
-        padding: None,
-        inner_background_color: None,
-        components: Vec::new(),
-    }
+    MjColumn::default()
 }
 
 pub(super) fn rebalance_widths(n: usize) -> Vec<String> {

@@ -20,10 +20,19 @@ fields:
     required: false
     type: string
     maps_to: "mj-image href"
+  - id: title
+    required: false
+    type: string
+    maps_to: "mj-image title"
   - id: width
     required: false
     type: string
     maps_to: "mj-image width"
+  - id: height
+    required: false
+    type: string
+    hint: "px, %, or auto"
+    maps_to: "mj-image height"
   - id: align
     required: false
     type: enum
@@ -34,8 +43,20 @@ fields:
     type: bool
     default: true
     maps_to: "mj-image fluid-on-mobile=true"
+  - id: border
+    required: false
+    type: string
+    hint: "CSS border, e.g. 1px solid #000"
+    maps_to: "mj-image border"
+  - id: border_radius
+    required: false
+    type: string
+    hint: "px or %"
+    maps_to: "mj-image border-radius"
   - id: padding
     required: false
     type: string
+    hint: "1-4 values with px or %"
+    example: "10px 20px"
     maps_to: "mj-image padding"
 ---

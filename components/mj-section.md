@@ -11,10 +11,47 @@ fields:
     required: false
     type: string
     maps_to: "mj-section background-color"
+  - id: background_url
+    required: false
+    type: url
+    maps_to: "mj-section background-url"
+  - id: background_size
+    required: false
+    type: string
+    hint: "auto, cover, contain, or px/%"
+    maps_to: "mj-section background-size"
+  - id: background_repeat
+    required: false
+    type: enum
+    options: ["repeat", "no-repeat"]
+    maps_to: "mj-section background-repeat"
+  - id: gutter
+    required: false
+    type: string
+    hint: "px or %"
+    maps_to: "mj-section gutter"
+  - id: direction
+    required: false
+    type: enum
+    options: ["ltr", "rtl"]
+    maps_to: "mj-section direction"
   - id: padding
     required: false
     type: string
+    hint: "1-4 values with px or %"
+    example: "10px 20px"
     maps_to: "mj-section padding"
+  - id: border
+    required: false
+    type: string
+    hint: "CSS border, e.g. 1px solid #000"
+    maps_to: "mj-section border"
+  - id: border_radius
+    required: false
+    type: string
+    hint: "px or %"
+    example: "8px"
+    maps_to: "mj-section border-radius"
   - id: full_width
     required: false
     type: bool

@@ -17,11 +17,38 @@ fields:
   - id: padding
     required: false
     type: string
+    hint: "1-4 values with px or %"
+    example: "10px 20px"
     maps_to: "mj-column padding"
   - id: inner_background_color
     required: false
     type: string
     maps_to: "mj-column inner-background-color"
+  - id: border
+    required: false
+    type: string
+    hint: "CSS border, e.g. 1px solid #000"
+    maps_to: "mj-column border"
+  - id: border_radius
+    required: false
+    type: string
+    hint: "px or %"
+    example: "8px"
+    maps_to: "mj-column border-radius"
+  - id: inner_border
+    required: false
+    type: string
+    maps_to: "mj-column inner-border"
+  - id: inner_border_radius
+    required: false
+    type: string
+    hint: "px or %"
+    maps_to: "mj-column inner-border-radius"
+  - id: vertical_align
+    required: false
+    type: enum
+    options: ["top", "middle", "bottom"]
+    maps_to: "mj-column vertical-align"
   - id: components
     required: true
     type: list

@@ -2,8 +2,8 @@
 use std::time::{Duration, Instant};
 
 use super::*;
-use crate::emit::{write_mjml, EmitMode};
-use crate::mjml::{self, gmail_clip_warning, MjmlError};
+use crate::emit::{EmitMode, write_mjml};
+use crate::mjml::{self, MjmlError, gmail_clip_warning};
 use crate::preview::{PreviewMeta, PreviewSession};
 use crate::storage;
 use crate::validate::validate_template_for_export;

@@ -202,7 +202,9 @@ fn text_col(width: &str, content: &str) -> SectionChild {
             font_family: None,
             color: None,
             padding: None,
+            ..Default::default()
         })],
+        ..Default::default()
     })
 }
 
@@ -224,6 +226,7 @@ fn welcome(name: &str) -> Template {
                 text_col("50%", "What you get: a weekly note, no spam."),
                 text_col("50%", "What we need: nothing else. You're set."),
             ],
+            ..Default::default()
         }),
         BodyNode::EmailCta(cta(
             "Start here",
@@ -302,6 +305,7 @@ fn transactional(name: &str) -> Template {
                         font_family: None,
                         color: None,
                         padding: None,
+                        ..Default::default()
                     }),
                     ColumnChild::MjButton(MjButton {
                         content: "View order".into(),
@@ -313,9 +317,12 @@ fn transactional(name: &str) -> Template {
                         border_radius: None,
                         width: None,
                         padding: None,
+                        ..Default::default()
                     }),
                 ],
+                ..Default::default()
             })],
+            ..Default::default()
         }),
         BodyNode::EmailFooter(transactional_footer()),
     ];

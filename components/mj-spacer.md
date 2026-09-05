@@ -11,4 +11,9 @@ fields:
     type: string
     default: "24px"
     maps_to: "mj-spacer height"
+  - id: padding
+    required: false
+    type: string
+    hint: "1-4 values with px or %"
+    maps_to: "mj-spacer padding"
 ---

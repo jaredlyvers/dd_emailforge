@@ -42,10 +42,7 @@ pub fn resolve_template_path(arg: &Path) -> anyhow::Result<PathBuf> {
         if json.is_file() {
             return Ok(json);
         }
-        anyhow::bail!(
-            "no template.json in directory '{}'",
-            arg.display()
-        );
+        anyhow::bail!("no template.json in directory '{}'", arg.display());
     }
     if arg.is_file() {
         return Ok(arg.to_path_buf());
@@ -79,9 +76,8 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
             _ => Path::new(".").join(name),
         }
     };
-    fs::write(&tmp, bytes).map_err(|e| {
-        anyhow::anyhow!("failed to write temp file '{}': {e}", tmp.display())
-    })?;
+    fs::write(&tmp, bytes)
+        .map_err(|e| anyhow::anyhow!("failed to write temp file '{}': {e}", tmp.display()))?;
     fs::rename(&tmp, path).map_err(|e| {
         anyhow::anyhow!(
             "failed to rename '{}' -> '{}': {e}",
@@ -106,9 +102,8 @@ pub fn save_template(path: &Path, template: &Template) -> anyhow::Result<()> {
 
 pub fn load_template(path: &Path) -> Result<Template, LoadError> {
     let raw = fs::read_to_string(path).map_err(LoadError::Io)?;
-    let peek: VersionPeek = serde_json::from_str(&raw).map_err(|e| {
-        LoadError::Parse(e.to_string())
-    })?;
+    let peek: VersionPeek =
+        serde_json::from_str(&raw).map_err(|e| LoadError::Parse(e.to_string()))?;
     match peek.version {
         None => return Err(LoadError::MissingVersion),
         Some(1) => {}
@@ -155,8 +150,11 @@ mod tests {
     fn load_missing_version() {
         let dir = temp_dir();
         let json = dir.join("template.json");
-        fs::write(&json, r#"{"name":"n","subject":"s","brand":{},"head":{"title":"t"},"body":{}}"#)
-            .unwrap();
+        fs::write(
+            &json,
+            r#"{"name":"n","subject":"s","brand":{},"head":{"title":"t"},"body":{}}"#,
+        )
+        .unwrap();
         match load_template(&json) {
             Err(LoadError::MissingVersion) => {}
             other => panic!("expected MissingVersion, got {other:?}"),

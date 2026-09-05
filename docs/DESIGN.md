@@ -858,7 +858,7 @@ FormEdit enum fields cycle in the order the variants are declared.
 
 Attribute names in JSON are snake_case; emitter maps to MJML hyphen-case. Omit empty optional attributes rather than emitting `attr=""`.
 
-**`MjSection`:** `background_color: Option<String>`, `padding: Option<String>` (CSS shorthand, default emitter `"20px 0"` via mj-attributes), `full_width: bool` (default false → MJML `full-width="full-width"` when true), `children: Vec<SectionChild>` (serde name `columns` is tempting but groups live here too — **JSON key is `children`**).
+**`MjSection`:** `background_color: Option<String>`, `padding: Option<String>` (MJML unit shorthand: 1-4 values with `px` or `%`, e.g. `10px` or `10px 20px`; bare numbers emit as `px`; default emitter `"20px 0"` via mj-attributes), `full_width: bool` (default false → MJML `full-width="full-width"` when true), `children: Vec<SectionChild>` (serde name `columns` is tempting but groups live here too — **JSON key is `children`**).
 
 **`MjColumn`:** `width: Option<String>` (`"100%"`, `"50%"`, `"300px"`; omit = MJML equal split), `background_color`, `padding`, `inner_background_color`, `components: Vec<ColumnChild>`.
 

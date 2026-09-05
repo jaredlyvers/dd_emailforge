@@ -1,13 +1,13 @@
 //! Apply an insert-picker kind at the current tree selection.
 use crate::model::{BodyNode, ColumnChild, MjColumn, MjGroup, MjSection, SectionChild, Template};
 
+use super::App;
 use super::component_kind::{
-    classify, empty_column, empty_group, wrap_leaf_in_section, ComponentKind, SelectionClass,
+    ComponentKind, SelectionClass, classify, empty_column, empty_group, wrap_leaf_in_section,
 };
 use super::edits::rebalance_widths;
 use super::toasts::ToastLevel;
 use super::tree::{Step, TreeId};
-use super::App;
 
 impl App {
     pub(in crate::tui) fn open_insert_picker(&mut self) {

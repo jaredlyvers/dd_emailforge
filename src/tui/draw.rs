@@ -69,7 +69,7 @@ impl App {
 
     fn render_body(&mut self, frame: &mut ratatui::Frame, area: Rect) {
         use super::details::{details_title, details_view};
-        use super::tree::{master_detail_tree_width, selected_label, PaneFocus};
+        use super::tree::{PaneFocus, master_detail_tree_width, selected_label};
 
         self.clamp_tree_selection();
         let rows = self.tree_rows();

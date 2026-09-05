@@ -308,15 +308,22 @@ impl App {
                 } else {
                     Modifier::empty()
                 };
-                frame.render_widget(
-                    Paragraph::new(format!("{}:", field.label)).style(
+                let mut label_spans = vec![Span::styled(
+                    format!("{}:", field.label),
+                    Style::default()
+                        .fg(label_color)
+                        .bg(self.theme.modal_background)
+                        .add_modifier(label_mod),
+                )];
+                if let Some(hint) = field.hint {
+                    label_spans.push(Span::styled(
+                        format!("  {hint}"),
                         Style::default()
-                            .fg(label_color)
-                            .bg(self.theme.modal_background)
-                            .add_modifier(label_mod),
-                    ),
-                    label_rect,
-                );
+                            .fg(self.theme.text_secondary)
+                            .bg(self.theme.modal_background),
+                    ));
+                }
+                frame.render_widget(Paragraph::new(Line::from(label_spans)), label_rect);
             }
             if box_top_screen >= 0 && box_top_screen < content_height as i32 {
                 let border_color = if focused {
@@ -420,7 +427,20 @@ impl App {
         match &field.kind {
             editform::FieldKind::Text { .. } | editform::FieldKind::Url { .. } => {
                 let value = state.get(field.id);
-                frame.render_widget(Paragraph::new(value.to_string()).style(value_style), rect);
+                if value.is_empty() {
+                    if let Some(placeholder) = field.placeholder {
+                        frame.render_widget(
+                            Paragraph::new(placeholder.to_string()).style(
+                                Style::default()
+                                    .fg(self.theme.text_disabled)
+                                    .bg(self.theme.modal_background),
+                            ),
+                            rect,
+                        );
+                    }
+                } else {
+                    frame.render_widget(Paragraph::new(value.to_string()).style(value_style), rect);
+                }
                 if focused && rect.width > 0 && rect.height > 0 {
                     let col = cursor_pos.min(value.chars().count()) as u16;
                     if col < rect.width {

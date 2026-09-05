@@ -2,9 +2,9 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::UNIX_EPOCH;
 
 use serde::Serialize;
@@ -64,12 +64,7 @@ impl PreviewSession {
         watch: Option<MjmlWatch>,
     ) -> std::io::Result<Self> {
         let meta = Arc::new(Mutex::new(meta));
-        let (port, join) = start_http(
-            template_root,
-            compiled,
-            Arc::clone(&meta),
-            "127.0.0.1:0",
-        )?;
+        let (port, join) = start_http(template_root, compiled, Arc::clone(&meta), "127.0.0.1:0")?;
         Ok(Self {
             _join: join,
             watch,
@@ -122,14 +117,10 @@ fn route(path: &str, state: &HttpState) -> (&'static str, Vec<u8>, &'static str)
     }
     match path {
         "/" => {
-            let meta = state
-                .meta
-                .lock()
-                .map(|g| g.clone())
-                .unwrap_or(PreviewMeta {
-                    subject: String::new(),
-                    preheader: String::new(),
-                });
+            let meta = state.meta.lock().map(|g| g.clone()).unwrap_or(PreviewMeta {
+                subject: String::new(),
+                preheader: String::new(),
+            });
             (
                 "200 OK",
                 wrapper_html(&meta).into_bytes(),
@@ -161,14 +152,10 @@ fn route(path: &str, state: &HttpState) -> (&'static str, Vec<u8>, &'static str)
             )
         }
         "/__meta" => {
-            let meta = state
-                .meta
-                .lock()
-                .map(|g| g.clone())
-                .unwrap_or(PreviewMeta {
-                    subject: String::new(),
-                    preheader: String::new(),
-                });
+            let meta = state.meta.lock().map(|g| g.clone()).unwrap_or(PreviewMeta {
+                subject: String::new(),
+                preheader: String::new(),
+            });
             let json = serde_json::to_string(&meta).unwrap_or_else(|_| "{}".into());
             ("200 OK", json.into_bytes(), "application/json")
         }
@@ -195,7 +182,10 @@ impl ParentDirCheck for str {
 
 fn serve_image(root: &Path, url_path: &str) -> (&'static str, Vec<u8>, &'static str) {
     let rel = PathBuf::from(url_path.trim_start_matches('/'));
-    if rel.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+    if rel
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
         return (
             "404 Not Found",
             b"Not Found".to_vec(),
@@ -354,11 +344,8 @@ mod tests {
 
     fn temp_dir() -> PathBuf {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "dd_emailforge_prev_{}_{}",
-            std::process::id(),
-            n
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("dd_emailforge_prev_{}_{}", std::process::id(), n));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -386,8 +373,7 @@ mod tests {
             subject: "Hello <b>&\"x".into(),
             preheader: "pre <em>".into(),
         }));
-        let (port, _h) =
-            start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
+        let (port, _h) = start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));
         let body = http_get(port, "/");
         assert!(body.contains("Hello &lt;b&gt;&amp;&quot;x"));
@@ -407,8 +393,7 @@ mod tests {
             preheader: "p".into(),
         }));
         let live = Arc::clone(&meta);
-        let (port, _h) =
-            start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
+        let (port, _h) = start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));
         let body = http_get(port, "/__meta");
         let json = body.split("\r\n\r\n").nth(1).unwrap_or(&body);
@@ -435,8 +420,7 @@ mod tests {
             subject: "s".into(),
             preheader: String::new(),
         }));
-        let (port, _h) =
-            start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
+        let (port, _h) = start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));
         let denied = http_get(port, "/../Cargo.toml");
         assert!(denied.contains("Not Found") || denied.contains("404"));
@@ -452,8 +436,7 @@ mod tests {
             subject: "s".into(),
             preheader: String::new(),
         }));
-        let (port, _h) =
-            start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
+        let (port, _h) = start_http(dir.clone(), compiled, meta, "127.0.0.1:0").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));
         let body = http_get(port, "/compiled.html");
         assert!(body.contains("compiling"));

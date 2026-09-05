@@ -1,6 +1,7 @@
 mod emit;
 mod mjml;
 mod model;
+mod padding;
 mod paths;
 mod preview;
 mod starters;
@@ -14,7 +15,7 @@ use std::process::ExitCode;
 
 use starters::StarterKind;
 
-use storage::{load_template, resolve_template_path, LoadError};
+use storage::{LoadError, load_template, resolve_template_path};
 use validate::validate_template_with_root;
 
 #[derive(Debug, Parser)]

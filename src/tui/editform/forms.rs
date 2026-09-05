@@ -8,17 +8,178 @@ const fn f(id: &'static str, label: &'static str, kind: FieldKind, required: boo
         kind,
         required,
         visible_when: None,
+        hint: None,
+        placeholder: None,
+    }
+}
+
+const fn padding_field() -> FormField {
+    FormField {
+        id: "padding",
+        label: "Padding",
+        kind: FieldKind::Text { default: "" },
+        required: false,
+        visible_when: None,
+        hint: Some(crate::padding::HINT),
+        placeholder: Some(crate::padding::PLACEHOLDER),
+    }
+}
+
+const fn hinted(
+    id: &'static str,
+    label: &'static str,
+    hint: &'static str,
+    placeholder: &'static str,
+) -> FormField {
+    FormField {
+        id,
+        label,
+        kind: FieldKind::Text { default: "" },
+        required: false,
+        visible_when: None,
+        hint: Some(hint),
+        placeholder: Some(placeholder),
+    }
+}
+
+const fn border_field() -> FormField {
+    FormField {
+        id: "border",
+        label: "Border",
+        kind: FieldKind::Text { default: "" },
+        required: false,
+        visible_when: None,
+        hint: Some("CSS border, e.g. 1px solid #000"),
+        placeholder: Some("e.g. 1px solid #000000"),
+    }
+}
+
+const fn border_radius_field() -> FormField {
+    hinted(
+        "border_radius",
+        "Border radius",
+        crate::padding::UNIT_HINT,
+        crate::padding::UNIT_PLACEHOLDER,
+    )
+}
+
+const fn css_class_field() -> FormField {
+    f(
+        "css_class",
+        "CSS class",
+        FieldKind::Text { default: "" },
+        false,
+    )
+}
+
+const fn hamburger_only(id: &'static str, label: &'static str, kind: FieldKind) -> FormField {
+    FormField {
+        id,
+        label,
+        kind,
+        required: false,
+        visible_when: Some(FieldPredicate::FieldEquals {
+            other_id: "hamburger",
+            value: "true",
+        }),
+        hint: None,
+        placeholder: None,
     }
 }
 
 pub const ALIGN_OPTIONS: &[&str] = &["", "left", "center", "right"];
 pub const BOOL_OPTIONS: &[&str] = &["false", "true"];
+pub const FONT_WEIGHT_OPTIONS: &[&str] = &["", "normal", "bold", "400", "700"];
+pub const FONT_STYLE_OPTIONS: &[&str] = &["", "normal", "italic"];
+pub const BORDER_STYLE_OPTIONS: &[&str] = &["", "solid", "dashed", "dotted", "none"];
+pub const TEXT_DECORATION_OPTIONS: &[&str] = &["", "none", "underline", "overline", "line-through"];
+pub const TEXT_TRANSFORM_OPTIONS: &[&str] = &["", "none", "uppercase", "lowercase", "capitalize"];
 pub const HERO_MODE_OPTIONS: &[&str] = &["fluid-height", "fixed-height"];
 pub const SOCIAL_MODE_OPTIONS: &[&str] = &["horizontal", "vertical"];
 pub const IMAGE_POS_OPTIONS: &[&str] = &["top", "left", "right"];
-pub const SOCIAL_NET_OPTIONS: &[&str] =
-    &["facebook", "instagram", "linkedin", "x", "github", "web"];
+pub const SOCIAL_NET_OPTIONS: &[&str] = &[
+    "facebook",
+    "instagram",
+    "linkedin",
+    "x",
+    "github",
+    "youtube",
+    "pinterest",
+    "google",
+    "tumblr",
+    "snapchat",
+    "vimeo",
+    "medium",
+    "soundcloud",
+    "dribbble",
+    "xing",
+    "web",
+];
+pub const ICON_POSITION_OPTIONS: &[&str] = &["", "left", "right"];
+pub const TABLE_ROLE_OPTIONS: &[&str] = &["", "none", "presentation"];
 pub const THUMBNAILS_OPTIONS: &[&str] = &["hidden", "visible", "supported"];
+pub const DIR_OPTIONS: &[&str] = &["", "auto", "ltr", "rtl"];
+pub const DIRECTION_OPTIONS: &[&str] = &["", "ltr", "rtl"];
+pub const VERTICAL_ALIGN_OPTIONS: &[&str] = &["", "top", "middle", "bottom"];
+pub const BG_REPEAT_OPTIONS: &[&str] = &["", "no-repeat", "repeat"];
+pub const TARGET_OPTIONS: &[&str] = &["", "_blank", "_self"];
+
+const fn direction_field() -> FormField {
+    f(
+        "direction",
+        "Direction",
+        FieldKind::Enum {
+            options: DIRECTION_OPTIONS,
+            default: "",
+        },
+        false,
+    )
+}
+
+const fn vertical_align_field() -> FormField {
+    f(
+        "vertical_align",
+        "Vertical align",
+        FieldKind::Enum {
+            options: VERTICAL_ALIGN_OPTIONS,
+            default: "",
+        },
+        false,
+    )
+}
+
+const fn background_url_field() -> FormField {
+    f(
+        "background_url",
+        "Background URL",
+        FieldKind::Url { default: "" },
+        false,
+    )
+}
+
+const fn background_size_field() -> FormField {
+    FormField {
+        id: "background_size",
+        label: "Background size",
+        kind: FieldKind::Text { default: "" },
+        required: false,
+        visible_when: None,
+        hint: Some("auto, cover, contain, or px/%"),
+        placeholder: Some("e.g. cover"),
+    }
+}
+
+const fn background_repeat_field() -> FormField {
+    f(
+        "background_repeat",
+        "Background repeat",
+        FieldKind::Enum {
+            options: BG_REPEAT_OPTIONS,
+            default: "",
+        },
+        false,
+    )
+}
 
 pub static FONT_ITEM_FORM: EditForm = EditForm {
     title: "font",
@@ -28,8 +189,7 @@ pub static FONT_ITEM_FORM: EditForm = EditForm {
             "href",
             "Google Fonts href",
             FieldKind::Url {
-                default:
-                    "https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap",
+                default: "https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap",
             },
             true,
         ),
@@ -62,6 +222,21 @@ pub static SOCIAL_ITEM_FORM: EditForm = EditForm {
             FieldKind::Url { default: "" },
             false,
         ),
+        f("alt", "Alt", FieldKind::Text { default: "" }, false),
+        f(
+            "background_color",
+            "Background",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        hinted(
+            "icon_size",
+            "Icon size",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        padding_field(),
+        css_class_field(),
     ],
 };
 
@@ -76,6 +251,15 @@ pub static HEAD_FORM: EditForm = EditForm {
             false,
         ),
         f("lang", "Lang", FieldKind::Text { default: "en" }, true),
+        f(
+            "dir",
+            "Dir",
+            FieldKind::Enum {
+                options: DIR_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
         f("title", "Title", FieldKind::Text { default: "" }, true),
         f(
             "breakpoint",
@@ -173,12 +357,15 @@ pub static BRAND_FORM: EditForm = EditForm {
 
 pub static BODY_FORM: EditForm = EditForm {
     title: "mj-body",
-    fields: &[f(
-        "background_color",
-        "Background",
-        FieldKind::Text { default: "" },
-        false,
-    )],
+    fields: &[
+        f(
+            "background_color",
+            "Background",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        css_class_field(),
+    ],
 };
 
 pub static SECTION_FORM: EditForm = EditForm {
@@ -190,7 +377,14 @@ pub static SECTION_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        background_url_field(),
+        background_size_field(),
+        background_repeat_field(),
+        padding_field(),
+        hinted("gutter", "Gutter", crate::padding::UNIT_HINT, "e.g. 4%"),
+        direction_field(),
+        border_field(),
+        border_radius_field(),
         f(
             "full_width",
             "Full width",
@@ -200,6 +394,7 @@ pub static SECTION_FORM: EditForm = EditForm {
             },
             false,
         ),
+        css_class_field(),
     ],
 };
 
@@ -213,13 +408,29 @@ pub static COLUMN_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        padding_field(),
         f(
             "inner_background_color",
             "Inner background",
             FieldKind::Text { default: "" },
             false,
         ),
+        border_field(),
+        border_radius_field(),
+        f(
+            "inner_border",
+            "Inner border",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        hinted(
+            "inner_border_radius",
+            "Inner border radius",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        vertical_align_field(),
+        css_class_field(),
     ],
 };
 
@@ -232,7 +443,18 @@ pub static WRAPPER_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        background_url_field(),
+        background_size_field(),
+        background_repeat_field(),
+        padding_field(),
+        hinted(
+            "gap",
+            "Gap",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        border_field(),
+        border_radius_field(),
         f(
             "full_width",
             "Full width",
@@ -242,6 +464,7 @@ pub static WRAPPER_FORM: EditForm = EditForm {
             },
             false,
         ),
+        css_class_field(),
     ],
 };
 
@@ -255,6 +478,9 @@ pub static GROUP_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
+        direction_field(),
+        vertical_align_field(),
+        css_class_field(),
     ],
 };
 
@@ -288,8 +514,24 @@ pub static HERO_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
+        f(
+            "background_width",
+            "Background width",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        f(
+            "background_position",
+            "Background position",
+            FieldKind::Text { default: "" },
+            false,
+        ),
         f("width", "Width", FieldKind::Text { default: "" }, false),
         f("height", "Height", FieldKind::Text { default: "" }, false),
+        padding_field(),
+        border_radius_field(),
+        vertical_align_field(),
+        css_class_field(),
     ],
 };
 
@@ -326,8 +568,58 @@ pub static TEXT_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
+        f(
+            "font_weight",
+            "Font weight",
+            FieldKind::Enum {
+                options: FONT_WEIGHT_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f(
+            "font_style",
+            "Font style",
+            FieldKind::Enum {
+                options: FONT_STYLE_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        hinted(
+            "line_height",
+            "Line height",
+            crate::padding::UNIT_HINT,
+            "e.g. 1.5  or  24px",
+        ),
         f("color", "Color", FieldKind::Text { default: "" }, false),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        padding_field(),
+        hinted(
+            "letter_spacing",
+            "Letter spacing",
+            crate::padding::UNIT_HINT,
+            "e.g. 0.5px",
+        ),
+        f(
+            "text_decoration",
+            "Text decoration",
+            FieldKind::Enum {
+                options: TEXT_DECORATION_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f(
+            "text_transform",
+            "Text transform",
+            FieldKind::Enum {
+                options: TEXT_TRANSFORM_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        hinted("height", "Height", crate::padding::UNIT_HINT, "e.g. 24px"),
+        css_class_field(),
     ],
 };
 
@@ -372,14 +664,83 @@ pub static BUTTON_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
+        hinted(
+            "font_size",
+            "Font size",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
         f(
-            "border_radius",
-            "Border radius",
-            FieldKind::Text { default: "" },
+            "font_weight",
+            "Font weight",
+            FieldKind::Enum {
+                options: FONT_WEIGHT_OPTIONS,
+                default: "",
+            },
             false,
         ),
+        f(
+            "font_style",
+            "Font style",
+            FieldKind::Enum {
+                options: FONT_STYLE_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        border_field(),
+        border_radius_field(),
+        hinted(
+            "inner_padding",
+            "Inner padding",
+            crate::padding::HINT,
+            crate::padding::PLACEHOLDER,
+        ),
         f("width", "Width", FieldKind::Text { default: "" }, false),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        hinted("height", "Height", crate::padding::UNIT_HINT, "e.g. 44px"),
+        f(
+            "target",
+            "Target",
+            FieldKind::Enum {
+                options: TARGET_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        padding_field(),
+        hinted(
+            "letter_spacing",
+            "Letter spacing",
+            crate::padding::UNIT_HINT,
+            "e.g. 0.5px",
+        ),
+        hinted(
+            "line_height",
+            "Line height",
+            crate::padding::UNIT_HINT,
+            "e.g. 120%",
+        ),
+        f(
+            "text_decoration",
+            "Text decoration",
+            FieldKind::Enum {
+                options: TEXT_DECORATION_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f(
+            "text_transform",
+            "Text transform",
+            FieldKind::Enum {
+                options: TEXT_TRANSFORM_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f("rel", "Rel", FieldKind::Text { default: "" }, false),
+        f("title", "Title", FieldKind::Text { default: "" }, false),
+        css_class_field(),
     ],
 };
 
@@ -389,7 +750,14 @@ pub static IMAGE_FORM: EditForm = EditForm {
         f("src", "Src", FieldKind::Url { default: "" }, true),
         f("alt", "Alt", FieldKind::Text { default: "" }, true),
         f("href", "Href", FieldKind::Url { default: "" }, false),
+        f("title", "Title", FieldKind::Text { default: "" }, false),
         f("width", "Width", FieldKind::Text { default: "" }, false),
+        hinted(
+            "height",
+            "Height",
+            crate::padding::UNIT_HINT,
+            "e.g. 200px  or  auto",
+        ),
         f(
             "align",
             "Align",
@@ -408,7 +776,20 @@ pub static IMAGE_FORM: EditForm = EditForm {
             },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        border_field(),
+        border_radius_field(),
+        padding_field(),
+        f(
+            "target",
+            "Target",
+            FieldKind::Enum {
+                options: TARGET_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f("rel", "Rel", FieldKind::Text { default: "" }, false),
+        css_class_field(),
     ],
 };
 
@@ -427,18 +808,42 @@ pub static DIVIDER_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        f(
+            "border_style",
+            "Border style",
+            FieldKind::Enum {
+                options: BORDER_STYLE_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f("width", "Width", FieldKind::Text { default: "" }, false),
+        f(
+            "align",
+            "Align",
+            FieldKind::Enum {
+                options: ALIGN_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        padding_field(),
+        css_class_field(),
     ],
 };
 
 pub static SPACER_FORM: EditForm = EditForm {
     title: "mj-spacer",
-    fields: &[f(
-        "height",
-        "Height",
-        FieldKind::Text { default: "24px" },
-        true,
-    )],
+    fields: &[
+        f(
+            "height",
+            "Height",
+            FieldKind::Text { default: "24px" },
+            true,
+        ),
+        padding_field(),
+        css_class_field(),
+    ],
 };
 
 pub static SOCIAL_FORM: EditForm = EditForm {
@@ -468,6 +873,27 @@ pub static SOCIAL_FORM: EditForm = EditForm {
             FieldKind::Text { default: "32px" },
             false,
         ),
+        border_radius_field(),
+        padding_field(),
+        hinted(
+            "icon_padding",
+            "Icon padding",
+            crate::padding::HINT,
+            crate::padding::PLACEHOLDER,
+        ),
+        hinted(
+            "inner_padding",
+            "Inner padding",
+            crate::padding::HINT,
+            crate::padding::PLACEHOLDER,
+        ),
+        hinted(
+            "font_size",
+            "Font size",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        f("color", "Color", FieldKind::Text { default: "" }, false),
         f(
             "elements",
             "Icons",
@@ -478,6 +904,7 @@ pub static SOCIAL_FORM: EditForm = EditForm {
             },
             false,
         ),
+        css_class_field(),
     ],
 };
 
@@ -514,7 +941,28 @@ pub static NAVBAR_FORM: EditForm = EditForm {
             },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        padding_field(),
+        hamburger_only(
+            "ico_align",
+            "Icon align",
+            FieldKind::Enum {
+                options: ALIGN_OPTIONS,
+                default: "",
+            },
+        ),
+        hamburger_only(
+            "ico_font_size",
+            "Icon font size",
+            FieldKind::Text { default: "" },
+        ),
+        hamburger_only(
+            "ico_padding",
+            "Icon padding",
+            FieldKind::Text { default: "" },
+        ),
+        hamburger_only("ico_open", "Icon open", FieldKind::Text { default: "" }),
+        hamburger_only("ico_close", "Icon close", FieldKind::Text { default: "" }),
+        css_class_field(),
     ],
 };
 
@@ -536,7 +984,47 @@ pub static NAVBAR_LINK_FORM: EditForm = EditForm {
             true,
         ),
         f("color", "Color", FieldKind::Text { default: "" }, false),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        f(
+            "font_family",
+            "Font family",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        hinted(
+            "font_size",
+            "Font size",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        f(
+            "font_weight",
+            "Font weight",
+            FieldKind::Enum {
+                options: FONT_WEIGHT_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f(
+            "text_decoration",
+            "Text decoration",
+            FieldKind::Enum {
+                options: TEXT_DECORATION_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f(
+            "text_transform",
+            "Text transform",
+            FieldKind::Enum {
+                options: TEXT_TRANSFORM_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        padding_field(),
+        css_class_field(),
     ],
 };
 
@@ -544,7 +1032,47 @@ pub static ACCORDION_FORM: EditForm = EditForm {
     title: "mj-accordion",
     fields: &[
         f("border", "Border", FieldKind::Text { default: "" }, false),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        padding_field(),
+        f(
+            "font_family",
+            "Font family",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        f(
+            "icon_position",
+            "Icon position",
+            FieldKind::Enum {
+                options: ICON_POSITION_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        hinted(
+            "icon_width",
+            "Icon width",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        hinted(
+            "icon_height",
+            "Icon height",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        f(
+            "icon_wrapped_url",
+            "Icon wrapped URL",
+            FieldKind::Url { default: "" },
+            false,
+        ),
+        f(
+            "icon_unwrapped_url",
+            "Icon unwrapped URL",
+            FieldKind::Url { default: "" },
+            false,
+        ),
+        css_class_field(),
     ],
 };
 
@@ -567,6 +1095,7 @@ pub static ACCORDION_ELEMENT_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
+        css_class_field(),
     ],
 };
 
@@ -582,7 +1111,20 @@ pub static CAROUSEL_FORM: EditForm = EditForm {
             },
             false,
         ),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        padding_field(),
+        border_radius_field(),
+        hinted(
+            "tb_border_radius",
+            "Thumbnail radius",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
+        hinted(
+            "icon_width",
+            "Icon width",
+            crate::padding::UNIT_HINT,
+            crate::padding::UNIT_PLACEHOLDER,
+        ),
         f(
             "thumbnails",
             "Thumbnails",
@@ -592,6 +1134,7 @@ pub static CAROUSEL_FORM: EditForm = EditForm {
             },
             true,
         ),
+        css_class_field(),
     ],
 };
 
@@ -607,6 +1150,8 @@ pub static CAROUSEL_IMAGE_FORM: EditForm = EditForm {
             FieldKind::Url { default: "" },
             false,
         ),
+        border_radius_field(),
+        css_class_field(),
     ],
 };
 
@@ -628,8 +1173,53 @@ pub static TABLE_FORM: EditForm = EditForm {
             FieldKind::Text { default: "" },
             false,
         ),
+        f(
+            "font_family",
+            "Font family",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        hinted(
+            "line_height",
+            "Line height",
+            crate::padding::UNIT_HINT,
+            "e.g. 22px",
+        ),
         f("color", "Color", FieldKind::Text { default: "" }, false),
-        f("padding", "Padding", FieldKind::Text { default: "" }, false),
+        f(
+            "align",
+            "Align",
+            FieldKind::Enum {
+                options: ALIGN_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        f("width", "Width", FieldKind::Text { default: "" }, false),
+        border_field(),
+        padding_field(),
+        f(
+            "cellpadding",
+            "Cell padding",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        f(
+            "cellspacing",
+            "Cell spacing",
+            FieldKind::Text { default: "" },
+            false,
+        ),
+        f(
+            "role",
+            "Role",
+            FieldKind::Enum {
+                options: TABLE_ROLE_OPTIONS,
+                default: "",
+            },
+            false,
+        ),
+        css_class_field(),
     ],
 };
 

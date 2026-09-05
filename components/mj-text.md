@@ -25,6 +25,20 @@ fields:
     required: false
     type: string
     maps_to: "mj-text font-family (omit → mj-all / brand)"
+  - id: font_weight
+    required: false
+    type: enum
+    options: ["normal", "bold", "400", "700"]
+    maps_to: "mj-text font-weight"
+  - id: font_style
+    required: false
+    type: enum
+    options: ["normal", "italic"]
+    maps_to: "mj-text font-style"
+  - id: line_height
+    required: false
+    type: string
+    maps_to: "mj-text line-height"
   - id: color
     required: false
     type: string
@@ -32,5 +46,7 @@ fields:
   - id: padding
     required: false
     type: string
+    hint: "1-4 values with px or %"
+    example: "10px 20px"
     maps_to: "mj-text padding"
 ---

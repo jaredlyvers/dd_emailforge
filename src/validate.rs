@@ -68,6 +68,7 @@ fn validate_inner(t: &Template, root: Option<&Path>, opts: ValidateOpts<'_>) -> 
     require_nonempty(&mut report, "subject", &t.subject);
     require_nonempty(&mut report, "head.title", &t.head.title);
     require_nonempty(&mut report, "lang", &t.lang);
+    check_one_of(&mut report, "dir", &t.dir, &["auto", "ltr", "rtl"]);
 
     if !(320..=800).contains(&t.brand.content_width) {
         report.errors.push(format!(
@@ -321,6 +322,53 @@ fn opt(v: &Option<String>) -> &str {
     v.as_deref().unwrap_or("")
 }
 
+fn check_padding(report: &mut ValidateReport, field: &str, value: &Option<String>) {
+    let Some(v) = value.as_deref().map(str::trim).filter(|s| !s.is_empty()) else {
+        return;
+    };
+    if crate::padding::normalize_padding(v).is_err() {
+        report.errors.push(format!(
+            "{field} must be {}, got '{v}'",
+            crate::padding::RULE
+        ));
+    }
+}
+
+fn check_one_of(report: &mut ValidateReport, field: &str, value: &str, allowed: &[&str]) {
+    let v = value.trim();
+    if v.is_empty() {
+        return;
+    }
+    if !allowed.iter().any(|a| *a == v) {
+        report.errors.push(format!(
+            "{field} must be one of {}, got '{value}'",
+            allowed.join("|")
+        ));
+    }
+}
+
+fn check_opt_one_of(
+    report: &mut ValidateReport,
+    field: &str,
+    value: &Option<String>,
+    allowed: &[&str],
+) {
+    check_one_of(report, field, opt(value), allowed);
+}
+
+fn check_unit(report: &mut ValidateReport, field: &str, value: &Option<String>) {
+    let Some(v) = value.as_deref().map(str::trim).filter(|s| !s.is_empty()) else {
+        return;
+    };
+    if crate::padding::normalize_padding(v).is_ok() || crate::padding::normalize_unit(v).is_ok() {
+        return;
+    }
+    report.errors.push(format!(
+        "{field} must be {}, got '{v}'",
+        crate::padding::UNIT_RULE
+    ));
+}
+
 fn walk_section(
     section: &MjSection,
     report: &mut ValidateReport,
@@ -334,6 +382,31 @@ fn walk_section(
         "mj-section.background_color",
         opt(&section.background_color),
     );
+    check_padding(report, "mj-section.padding", &section.padding);
+    check_unit(report, "mj-section.border_radius", &section.border_radius);
+    check_unit(report, "mj-section.gutter", &section.gutter);
+    check_opt_one_of(
+        report,
+        "mj-section.direction",
+        &section.direction,
+        &["ltr", "rtl"],
+    );
+    check_opt_one_of(
+        report,
+        "mj-section.background_repeat",
+        &section.background_repeat,
+        &["repeat", "no-repeat"],
+    );
+    if let Some(url) = &section.background_url {
+        check_optional_image(
+            report,
+            "mj-section.background_url",
+            url,
+            root,
+            opts,
+            relative_images,
+        );
+    }
     if section.children.is_empty() {
         report.errors.push("mj-section has no children".to_string());
     }
@@ -362,6 +435,25 @@ fn walk_wrapper(
         "mj-wrapper.background_color",
         opt(&wrapper.background_color),
     );
+    check_padding(report, "mj-wrapper.padding", &wrapper.padding);
+    check_unit(report, "mj-wrapper.border_radius", &wrapper.border_radius);
+    check_unit(report, "mj-wrapper.gap", &wrapper.gap);
+    check_opt_one_of(
+        report,
+        "mj-wrapper.background_repeat",
+        &wrapper.background_repeat,
+        &["repeat", "no-repeat"],
+    );
+    if let Some(url) = &wrapper.background_url {
+        check_optional_image(
+            report,
+            "mj-wrapper.background_url",
+            url,
+            root,
+            opts,
+            relative_images,
+        );
+    }
     for child in &wrapper.children {
         match child {
             BodyNode::MjSection(_) | BodyNode::MjHero(_) => {
@@ -386,6 +478,18 @@ fn walk_group(
         report,
         "mj-group.background_color",
         opt(&group.background_color),
+    );
+    check_opt_one_of(
+        report,
+        "mj-group.direction",
+        &group.direction,
+        &["ltr", "rtl"],
+    );
+    check_opt_one_of(
+        report,
+        "mj-group.vertical_align",
+        &group.vertical_align,
+        &["top", "middle", "bottom"],
     );
     if group.children.is_empty() {
         report.errors.push("mj-group has no columns".to_string());
@@ -413,6 +517,19 @@ fn walk_column(
         "mj-column.inner_background_color",
         opt(&col.inner_background_color),
     );
+    check_padding(report, "mj-column.padding", &col.padding);
+    check_unit(report, "mj-column.border_radius", &col.border_radius);
+    check_opt_one_of(
+        report,
+        "mj-column.vertical_align",
+        &col.vertical_align,
+        &["top", "middle", "bottom"],
+    );
+    check_unit(
+        report,
+        "mj-column.inner_border_radius",
+        &col.inner_border_radius,
+    );
     for child in &col.components {
         walk_column_child(child, report, root, opts, font_haystack, relative_images);
     }
@@ -430,6 +547,14 @@ fn walk_hero(
         report,
         "mj-hero.background_color",
         opt(&hero.background_color),
+    );
+    check_padding(report, "mj-hero.padding", &hero.padding);
+    check_unit(report, "mj-hero.border_radius", &hero.border_radius);
+    check_opt_one_of(
+        report,
+        "mj-hero.vertical_align",
+        &hero.vertical_align,
+        &["top", "middle", "bottom"],
     );
     if let Some(url) = &hero.background_url {
         check_optional_image(
@@ -457,6 +582,8 @@ fn walk_column_child(
     match child {
         ColumnChild::MjText(text) => {
             check_color(report, "mj-text.color", opt(&text.color));
+            check_padding(report, "mj-text.padding", &text.padding);
+            check_unit(report, "mj-text.line_height", &text.line_height);
             if let Some(ff) = &text.font_family {
                 font_haystack.push(' ');
                 font_haystack.push_str(ff);
@@ -474,6 +601,17 @@ fn walk_column_child(
                 opt(&btn.background_color),
             );
             check_color(report, "mj-button.color", opt(&btn.color));
+            check_padding(report, "mj-button.padding", &btn.padding);
+            check_padding(report, "mj-button.inner_padding", &btn.inner_padding);
+            check_unit(report, "mj-button.border_radius", &btn.border_radius);
+            check_unit(report, "mj-button.font_size", &btn.font_size);
+            check_unit(report, "mj-button.height", &btn.height);
+            check_opt_one_of(
+                report,
+                "mj-button.target",
+                &btn.target,
+                &["_blank", "_self"],
+            );
             if let Some(ff) = &btn.font_family {
                 font_haystack.push(' ');
                 font_haystack.push_str(ff);
@@ -491,21 +629,43 @@ fn walk_column_child(
                 opts,
                 relative_images,
             );
+            check_padding(report, "mj-image.padding", &img.padding);
+            check_unit(report, "mj-image.border_radius", &img.border_radius);
+            check_unit(report, "mj-image.height", &img.height);
+            check_opt_one_of(report, "mj-image.target", &img.target, &["_blank", "_self"]);
             if img.alt.trim().is_empty() {
                 report.errors.push("mj-image.alt is empty".to_string());
             }
         }
         ColumnChild::MjDivider(d) => {
             check_color(report, "mj-divider.border_color", opt(&d.border_color));
+            check_padding(report, "mj-divider.padding", &d.padding);
+            check_unit(report, "mj-divider.border_width", &d.border_width);
+            check_unit(report, "mj-divider.width", &d.width);
         }
-        ColumnChild::MjSpacer(_) => {}
+        ColumnChild::MjSpacer(sp) => {
+            check_padding(report, "mj-spacer.padding", &sp.padding);
+        }
         ColumnChild::MjSocial(social) => {
+            check_padding(report, "mj-social.padding", &social.padding);
+            check_padding(report, "mj-social.icon_padding", &social.icon_padding);
+            check_padding(report, "mj-social.inner_padding", &social.inner_padding);
+            check_unit(report, "mj-social.border_radius", &social.border_radius);
+            check_color(report, "mj-social.color", opt(&social.color));
             for el in &social.elements {
                 check_social_element(el, report);
             }
         }
         ColumnChild::MjTable(table) => {
             check_color(report, "mj-table.color", opt(&table.color));
+            check_padding(report, "mj-table.padding", &table.padding);
+            check_unit(report, "mj-table.line_height", &table.line_height);
+            check_opt_one_of(
+                report,
+                "mj-table.role",
+                &table.role,
+                &["none", "presentation"],
+            );
             if contains_ci(&table.content, "</mj-") {
                 report
                     .errors
@@ -525,6 +685,7 @@ fn walk_column_child(
 
 fn walk_navbar(nav: &crate::model::MjNavbar, report: &mut ValidateReport) {
     check_color(report, "mj-navbar.ico_color", opt(&nav.ico_color));
+    check_padding(report, "mj-navbar.padding", &nav.padding);
     if nav.links.is_empty() {
         report
             .warnings
@@ -537,10 +698,19 @@ fn walk_navbar(nav: &crate::model::MjNavbar, report: &mut ValidateReport) {
                 .push("mj-navbar-link.href is empty".to_string());
         }
         check_color(report, "mj-navbar-link.color", opt(&link.color));
+        check_padding(report, "mj-navbar-link.padding", &link.padding);
+        check_unit(report, "mj-navbar-link.font_size", &link.font_size);
     }
 }
 
 fn walk_accordion(acc: &crate::model::MjAccordion, report: &mut ValidateReport) {
+    check_padding(report, "mj-accordion.padding", &acc.padding);
+    check_opt_one_of(
+        report,
+        "mj-accordion.icon_position",
+        &acc.icon_position,
+        &["left", "right"],
+    );
     if acc.elements.is_empty() {
         report
             .warnings
@@ -572,6 +742,13 @@ fn walk_carousel(
     opts: ValidateOpts<'_>,
     relative_images: &mut bool,
 ) {
+    check_padding(report, "mj-carousel.padding", &car.padding);
+    check_unit(report, "mj-carousel.border_radius", &car.border_radius);
+    check_unit(
+        report,
+        "mj-carousel.tb_border_radius",
+        &car.tb_border_radius,
+    );
     if car.images.is_empty() {
         report
             .warnings
@@ -616,6 +793,12 @@ fn check_social_element(el: &MjSocialElement, report: &mut ValidateReport) {
             .warnings
             .push("social web element has no icon src".to_string());
     }
+    check_color(
+        report,
+        "mj-social-element.background_color",
+        opt(&el.background_color),
+    );
+    check_padding(report, "mj-social-element.padding", &el.padding);
 }
 
 fn walk_email_header(
@@ -873,9 +1056,13 @@ mod tests {
                         content: "Home".into(),
                         color: None,
                         padding: None,
+                        ..Default::default()
                     }],
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let r = validate_template(&t);
         assert!(report_has(&r, "mj-navbar-link.href is empty"));
@@ -901,8 +1088,11 @@ mod tests {
                     align: None,
                     fluid_on_mobile: true,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let r = validate_template(&t);
         assert!(report_has(&r, "unsupported scheme"));
@@ -928,8 +1118,11 @@ mod tests {
                     align: None,
                     fluid_on_mobile: true,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let r = validate_template(&t);
         assert!(report_has(&r, "mj-image.src is empty"));
@@ -982,8 +1175,11 @@ mod tests {
                     font_family: None,
                     color: None,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let r = validate_template(&t);
         assert!(report_has(&r, "</mj-"));
@@ -1114,8 +1310,11 @@ mod tests {
                     align: None,
                     fluid_on_mobile: true,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let r = validate_template_with_root(&t, Some(&dir));
         assert!(report_has(&r, "Missing local image"));
@@ -1142,10 +1341,61 @@ mod tests {
                     align: None,
                     fluid_on_mobile: true,
                     padding: None,
+                    ..Default::default()
                 })],
+                ..Default::default()
             })],
+            ..Default::default()
         }));
         let r = validate_template_for_export(&t, None);
         assert!(report_has(&r, "https://"));
+    }
+
+    fn section_with_column_padding(padding: Option<String>) -> Template {
+        let mut t = Template::minimal();
+        t.body.nodes.push(BodyNode::MjSection(MjSection {
+            background_color: None,
+            padding: None,
+            full_width: false,
+            children: vec![crate::model::SectionChild::MjColumn(MjColumn {
+                width: None,
+                background_color: None,
+                padding,
+                inner_background_color: None,
+                components: Vec::new(),
+                ..Default::default()
+            })],
+            ..Default::default()
+        }));
+        t
+    }
+
+    #[test]
+    fn unitless_padding_is_accepted() {
+        let t = section_with_column_padding(Some("12 10 12 10".into()));
+        let r = validate_template(&t);
+        assert!(r.ok(), "{:?}", r.errors);
+    }
+
+    #[test]
+    fn padding_with_units_passes() {
+        let t = section_with_column_padding(Some("10px 20%".into()));
+        let r = validate_template(&t);
+        assert!(r.ok(), "{:?}", r.errors);
+    }
+
+    #[test]
+    fn padding_rejects_unknown_units() {
+        let t = section_with_column_padding(Some("10em".into()));
+        let r = validate_template(&t);
+        assert!(report_has(&r, "mj-column.padding"));
+        assert!(report_has(&r, "px or %"));
+    }
+
+    #[test]
+    fn padding_rejects_five_values() {
+        let t = section_with_column_padding(Some("1px 2px 3px 4px 5px".into()));
+        let r = validate_template(&t);
+        assert!(report_has(&r, "mj-column.padding"));
     }
 }

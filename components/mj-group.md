@@ -14,6 +14,16 @@ fields:
     required: false
     type: string
     maps_to: "mj-group background-color"
+  - id: direction
+    required: false
+    type: enum
+    options: ["ltr", "rtl"]
+    maps_to: "mj-group direction"
+  - id: vertical_align
+    required: false
+    type: enum
+    options: ["top", "middle", "bottom"]
+    maps_to: "mj-group vertical-align"
   - id: children
     required: true
     type: list
